@@ -1,0 +1,31 @@
+# Laravel in app/ subdirectory
+app/vendor/
+app/node_modules/
+app/public/build/
+app/public/hot/
+app/public/storage/
+app/storage/*.key
+app/storage/framework/cache/data/*
+!app/storage/framework/cache/data/.gitignore
+app/storage/framework/sessions/*
+!app/storage/framework/sessions/.gitignore
+app/storage/framework/views/*
+!app/storage/framework/views/.gitignore
+app/storage/logs/*
+!app/storage/logs/.gitignore
+app/.env
+app/.env.backup
+app/.env.production
+app/.phpunit.cache/
+app/Homestead.json
+app/Homestead.yaml
+app/auth.json
+app/npm-debug.log
+app/yarn-error.log
+
+# IDE / OS files
+.idea/
+.vscode/
+.fleet/
+.DS_Store
+Thumbs.db
