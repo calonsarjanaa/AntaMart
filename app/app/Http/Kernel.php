@@ -64,5 +64,6 @@ class Kernel extends HttpKernel
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'xendit.verify' => \App\Http\Middleware\VerifyXenditWebhook::class,
+        'role' => \App\Http\Middleware\RequireUserRole::class,
     ];
 }

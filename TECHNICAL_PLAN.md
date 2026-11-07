@@ -15,7 +15,7 @@ This roadmap was established in **Phase 2 (Technical Planning)** and is tracked 
 | **T-05** | Xendit Adapter: Create Invoice Session | FR-PAY-001 | ✅ Completed | `77d46c3` |
 | **T-06** | Xendit Webhook (`VerifyXenditWebhook` middleware + `XenditController` + `ProcessXenditCallback` job) | FR-PAY-003 to 006, FR-INV-004, FR-INV-005 | ✅ Completed | `f7eac69` |
 | **T-07** | Payment Expiry (`ExpireUnpaidOrder` job + reservation release) | FR-PAY-002, FR-INV-006 | ✅ Implemented; verification pending | — |
-| **T-08** | Cancellation Flow (`CancellationService` + Storefront & Admin Endpoints) | FR-CAN-001 to 005 | 📋 Pending | — |
+| **T-08** | Cancellation Flow (`CancellationService` + Storefront & Admin Endpoints) | FR-CAN-001 to 005 | ✅ Implemented; verification pending | — |
 | **T-09** | Manual Refund Tracking (`RefundService` + Admin Mark-Refunded Endpoint) | FR-REF-001 to 005, FR-INV-007 | 📋 Pending | — |
 | **T-10** | Shipment Management (`ShipmentService` + Admin Tracking Endpoints) | FR-SHP-001, 003, 005 | 📋 Pending | — |
 | **T-11** | Guest Order Tracking Endpoint + Rate Limiting | FR-HIS-001, FR-TRX-011 | 📋 Pending | — |
@@ -91,13 +91,15 @@ This roadmap was established in **Phase 2 (Technical Planning)** and is tracked 
 - Payment and expiry transactions lock the order row so only one can consume or release its reservations.
 - Run a Laravel database queue worker (`php artisan queue:work database`) for delayed expiry jobs to execute.
 
-### 📋 T-08: Cancellation Flow
-- Customer submission: only on `processing` orders, creates `cancellation_requests` record.
-- Customer withdrawal: allowed only before Store Owner decision (`decided_at IS NULL`).
-- Store Owner review:
-  - Approve: cancels order, transitions refund state to `manual_refund_pending`.
-  - Reject: requires rejection reason.
-- Store Owner immediate cancellation on `processing` order.
+### ✅ T-08: Cancellation Flow (Verification Pending)
+- Customer and guest cancellation request submission is available at `POST /api/orders/{id}/cancellation-requests`; guests must provide the exact guest email recorded on the order.
+- Only one pending cancellation request is allowed per order.
+- Customer and guest withdrawal is available at `POST /api/orders/{id}/cancellation-requests/{requestId}/withdraw` and is allowed only before Store Owner decision (`decided_at IS NULL`).
+- Store Owner review is available at `POST /api/admin/orders/{id}/cancellation-requests/{requestId}/review`:
+  - Approve: cancels a `processing` order and flags a paid order for `manual_refund_pending`.
+  - Reject: requires a rejection reason.
+- Store Owner immediate cancellation is available at `POST /api/admin/orders/{id}/cancel`, requires a reason, and only accepts `processing` orders.
+- Cancellation does not restock paid items; restock remains gated by the manual refund flow (FR-INV-007).
 
 ### 📋 T-09: Manual Refund Tracking
 - `RefundService` flags orders after paid cancellation or late payment.
