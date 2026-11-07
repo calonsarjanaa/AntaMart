@@ -8,6 +8,7 @@ use App\Models\InventoryReservation;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
+use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Refund;
 use App\Models\User;
@@ -23,12 +24,15 @@ beforeEach(function () {
         'name' => 'Refund Customer', 'email' => 'refund-customer-feature@example.com', 'password' => bcrypt('password'), 'role' => 'customer',
     ]);
 
+    $productA = Product::create(['id' => 91, 'name' => 'Resellable Item A', 'slug' => 'resellable-item-a']);
+    $productB = Product::create(['id' => 92, 'name' => 'Non-resellable Item B', 'slug' => 'non-resellable-item-b']);
+
     $this->variantA = ProductVariant::create([
-        'product_id' => 91, 'sku' => 'REFUND-A', 'name' => 'Resellable Item A',
+        'product_id' => $productA->id, 'sku' => 'REFUND-A', 'name' => 'Resellable Item A',
         'price' => 30000, 'stock_physical' => 7, 'stock_reserved' => 0, 'is_active' => true,
     ]);
     $this->variantB = ProductVariant::create([
-        'product_id' => 92, 'sku' => 'REFUND-B', 'name' => 'Non-resellable Item B',
+        'product_id' => $productB->id, 'sku' => 'REFUND-B', 'name' => 'Non-resellable Item B',
         'price' => 45000, 'stock_physical' => 4, 'stock_reserved' => 0, 'is_active' => true,
     ]);
 

@@ -8,6 +8,7 @@ use App\Models\AuditLog;
 use App\Models\CancellationRequest;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Refund;
 use App\Models\User;
@@ -16,8 +17,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
+    $product = Product::create(['id' => 81, 'name' => 'Cancellation Test Item', 'slug' => 'cancellation-test-item']);
     $this->variant = ProductVariant::create([
-        'product_id'     => 81,
+        'product_id'     => $product->id,
         'sku'            => 'CANCEL-01',
         'name'           => 'Cancellation Test Item',
         'price'          => 40000,

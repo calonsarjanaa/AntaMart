@@ -19,6 +19,10 @@
       "name": "Storefront",
       "item": [
         {
+          "name": "List catalog products",
+          "request": {"method": "GET", "header": [{"key": "Accept", "value": "application/json"}], "url": "{{baseUrl}}/products?page=1"}
+        },
+        {
           "name": "Checkout (guest)",
           "request": {
             "method": "POST",

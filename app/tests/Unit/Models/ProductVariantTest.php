@@ -1,13 +1,16 @@
 <?php
 
+use App\Models\Product;
 use App\Models\ProductVariant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
 test('available stock calculates physical minus reserved correctly per FR-INV-002', function () {
+    $product = Product::create(['name' => 'Test Product', 'slug' => 'test-product']);
+
     $variant = ProductVariant::create([
-        'product_id'     => 1,
+        'product_id'     => $product->id,
         'sku'            => 'TEST-SKU-1',
         'name'           => 'Test Variant',
         'price'          => 15000.00,

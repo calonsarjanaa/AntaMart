@@ -4,6 +4,7 @@ use App\Enums\OrderStatus;
 use App\Models\AuditLog;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -15,8 +16,9 @@ beforeEach(function () {
     config()->set('services.xendit.secret_key', 'xnd_development_dummy_key');
     config()->set('services.xendit.webhook_token', 'dummy_token');
 
+    $product = Product::create(['id' => 1, 'name' => 'Cotton Shirt', 'slug' => 'cotton-shirt']);
     $this->variant = ProductVariant::create([
-        'product_id'     => 1,
+        'product_id'     => $product->id,
         'sku'            => 'SKU-SHIRT-01',
         'name'           => 'Cotton Shirt',
         'price'          => 100000.00,

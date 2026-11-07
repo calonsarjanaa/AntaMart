@@ -40,9 +40,20 @@ Then create the schema and start the app and queue worker in separate terminals:
 
 ```sh
 php artisan migrate
+php artisan db:seed
+```
+
+Start the app and queue worker in separate terminals:
+
+```sh
 php artisan serve
+```
+
+```sh
 php artisan queue:work database
 ```
+
+The default seeder creates synthetic catalog items for local UI development. It uses `firstOrCreate` for variants so rerunning it does not reset existing variant stock.
 
 The API is served below `/api`. The queue worker is needed for delayed order-expiry jobs. For a local callback, configure the Xendit dashboard or a webhook forwarder to send callbacks to `POST /api/webhooks/xendit` and set the same callback token in `XENDIT_WEBHOOK_TOKEN`.
 

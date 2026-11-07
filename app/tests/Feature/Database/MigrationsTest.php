@@ -19,6 +19,7 @@ test('database migrations create all required tables', function () {
         'refunds',
         'shipments',
         'audit_logs',
+        'products',
         'product_variants',
     ];
 

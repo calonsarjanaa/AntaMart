@@ -38,6 +38,8 @@ class CheckoutController extends Controller
                 'payment_url'     => $paymentSession['payment_url'] ?? null,
                 'expires_at'      => $paymentSession['expires_at'] ?? $order->expires_at?->toIso8601String(),
                 'items'           => $order->items->map(fn ($item) => [
+                    'product_name' => $item->product_snapshot['name'] ?? null,
+                    'variant_name' => $item->variant_snapshot['name'] ?? null,
                     'sku'        => $item->sku,
                     'quantity'   => $item->quantity,
                     'unit_price' => $item->unit_price,

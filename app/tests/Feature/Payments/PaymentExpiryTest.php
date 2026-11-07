@@ -7,14 +7,16 @@ use App\Models\AuditLog;
 use App\Models\InventoryReservation;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\Product;
 use App\Models\ProductVariant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
+    $product = Product::create(['id' => 71, 'name' => 'Expiry Test Item', 'slug' => 'expiry-test-item']);
     $this->variant = ProductVariant::create([
-        'product_id'     => 71,
+        'product_id'     => $product->id,
         'sku'            => 'EXPIRY-01',
         'name'           => 'Expiry Test Item',
         'price'          => 25000,
