@@ -13,7 +13,7 @@
 
 uses(
     Tests\TestCase::class,
-)->in('Feature', 'Unit/Models');
+)->in('Feature', 'Unit');
 
 /*
 |--------------------------------------------------------------------------

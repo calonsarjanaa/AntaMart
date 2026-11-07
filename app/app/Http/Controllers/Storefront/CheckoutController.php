@@ -5,21 +5,26 @@ namespace App\Http\Controllers\Storefront;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CheckoutRequest;
 use App\Services\CheckoutService;
+use App\Services\PaymentService;
 use Illuminate\Http\JsonResponse;
 
 class CheckoutController extends Controller
 {
     public function __construct(
-        protected CheckoutService $checkoutService
+        protected CheckoutService $checkoutService,
+        protected PaymentService $paymentService
     ) {}
 
     /**
-     * Process checkout for guest or authenticated customer per FR-TRX-001.
+     * Process checkout for guest or authenticated customer per FR-TRX-001 & FR-PAY-001.
      */
     public function __invoke(CheckoutRequest $request): JsonResponse
     {
         $user = $request->user();
         $order = $this->checkoutService->checkout($request->validated(), $user);
+
+        // FR-PAY-001 — Create payment session on Xendit
+        $paymentSession = $this->paymentService->createPaymentSession($order);
 
         return response()->json([
             'message' => 'Order created successfully.',
@@ -30,6 +35,8 @@ class CheckoutController extends Controller
                 'shipping_cost'   => $order->shipping_cost,
                 'total'           => $order->total,
                 'idempotency_key' => $order->idempotency_key,
+                'payment_url'     => $paymentSession['payment_url'] ?? null,
+                'expires_at'      => $paymentSession['expires_at'] ?? $order->expires_at?->toIso8601String(),
                 'items'           => $order->items->map(fn ($item) => [
                     'sku'        => $item->sku,
                     'quantity'   => $item->quantity,

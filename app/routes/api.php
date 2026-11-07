@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Storefront\CheckoutController;
+use App\Http\Controllers\Storefront\RetryPaymentSessionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -16,3 +17,6 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 // Storefront Checkout (Guest & Auth)
 Route::post('/checkout', CheckoutController::class);
+
+// Retry / Re-create payment session
+Route::post('/orders/{id}/payment-session', RetryPaymentSessionController::class);
