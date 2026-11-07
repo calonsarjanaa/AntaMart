@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\CancellationController as AdminCancellationController;
+use App\Http\Controllers\Admin\RefundController;
 use App\Http\Controllers\Storefront\CancellationRequestController;
 use App\Http\Controllers\Storefront\CheckoutController;
 use App\Http\Controllers\Storefront\RetryPaymentSessionController;
@@ -32,6 +33,7 @@ Route::post('/orders/{id}/cancellation-requests/{requestId}/withdraw', [Cancella
 Route::middleware(['auth:sanctum', 'role:store_owner'])->prefix('admin')->group(function () {
     Route::post('/orders/{id}/cancellation-requests/{requestId}/review', [AdminCancellationController::class, 'review']);
     Route::post('/orders/{id}/cancel', [AdminCancellationController::class, 'cancel']);
+    Route::post('/orders/{id}/refund/mark-refunded', [RefundController::class, 'markRefunded']);
 });
 
 // Xendit Webhook Callback

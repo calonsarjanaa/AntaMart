@@ -4,12 +4,11 @@ namespace App\Jobs;
 
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
-use App\Enums\RefundStatus;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\PaymentCallback;
-use App\Models\Refund;
 use App\Services\InventoryService;
+use App\Services\RefundService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -35,7 +34,7 @@ class ProcessXenditCallback implements ShouldQueue
         public array $callbackData
     ) {}
 
-    public function handle(InventoryService $inventoryService): void
+    public function handle(InventoryService $inventoryService, RefundService $refundService): void
     {
         $paymentId = $this->callbackData['payment_id'];
         $orderId   = $this->callbackData['order_id'];
@@ -79,7 +78,7 @@ class ProcessXenditCallback implements ShouldQueue
             return;
         }
 
-        DB::transaction(function () use ($paymentId, $order, $amount, $raw, $inventoryService) {
+        DB::transaction(function () use ($paymentId, $order, $amount, $raw, $inventoryService, $refundService) {
             // Serialize payment confirmation with expiry so only one path can release or consume stock.
             $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->first();
 
@@ -123,14 +122,7 @@ class ProcessXenditCallback implements ShouldQueue
                 $payment->late_payment_detected_at = now();
                 $payment->save();
 
-                Refund::updateOrCreate(
-                    ['order_id' => $lockedOrder->id],
-                    [
-                        'amount' => $amount,
-                        'reason' => 'Late payment received after order had expired.',
-                        'status' => RefundStatus::ManualRefundPending,
-                    ]
-                );
+                $refundService->flagForOrder($lockedOrder, 'Late payment received after order had expired.');
 
                 Log::warning("Late payment detected for expired order [{$lockedOrder->id}]. Flagged for manual refund.", [
                     'order_id'   => $lockedOrder->id,

@@ -19,12 +19,14 @@ class Refund extends Model
         'refunded_by',
         'refunded_at',
         'notes',
+        'resellable_item_ids',
     ];
 
     protected $casts = [
-        'status'      => RefundStatus::class,
-        'amount'      => 'decimal:2',
-        'refunded_at' => 'datetime',
+        'status'               => RefundStatus::class,
+        'amount'               => 'decimal:2',
+        'refunded_at'          => 'datetime',
+        'resellable_item_ids' => 'array',
     ];
 
     public function order(): BelongsTo

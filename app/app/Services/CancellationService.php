@@ -5,16 +5,18 @@ namespace App\Services;
 use App\Enums\CancellationStatus;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
-use App\Enums\RefundStatus;
 use App\Models\CancellationRequest as CancellationRequestModel;
 use App\Models\Order;
-use App\Models\Refund;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class CancellationService
 {
+    public function __construct(
+        protected RefundService $refundService
+    ) {}
+
     public function submitRequest(Order $order, ?User $user, ?string $guestEmail, string $reason): CancellationRequestModel
     {
         return DB::transaction(function () use ($order, $user, $guestEmail, $reason): CancellationRequestModel {
@@ -150,14 +152,7 @@ class CancellationService
         $order->transitionTo(OrderStatus::Cancelled);
 
         if ($payment?->status === PaymentStatus::Paid) {
-            Refund::firstOrCreate(
-                ['order_id' => $order->id],
-                [
-                    'amount' => $payment->amount,
-                    'reason' => "Order cancellation: {$reason}",
-                    'status' => RefundStatus::ManualRefundPending,
-                ]
-            );
+            $this->refundService->flagForOrder($order, "Order cancellation: {$reason}");
         }
     }
 

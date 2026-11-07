@@ -16,7 +16,7 @@ This roadmap was established in **Phase 2 (Technical Planning)** and is tracked 
 | **T-06** | Xendit Webhook (`VerifyXenditWebhook` middleware + `XenditController` + `ProcessXenditCallback` job) | FR-PAY-003 to 006, FR-INV-004, FR-INV-005 | ✅ Completed | `f7eac69` |
 | **T-07** | Payment Expiry (`ExpireUnpaidOrder` job + reservation release) | FR-PAY-002, FR-INV-006 | ✅ Implemented; verification pending | — |
 | **T-08** | Cancellation Flow (`CancellationService` + Storefront & Admin Endpoints) | FR-CAN-001 to 005 | ✅ Implemented; verification pending | — |
-| **T-09** | Manual Refund Tracking (`RefundService` + Admin Mark-Refunded Endpoint) | FR-REF-001 to 005, FR-INV-007 | 📋 Pending | — |
+| **T-09** | Manual Refund Tracking (`RefundService` + Admin Mark-Refunded Endpoint) | FR-REF-001 to 005, FR-INV-007 | ✅ Implemented; verification pending | — |
 | **T-10** | Shipment Management (`ShipmentService` + Admin Tracking Endpoints) | FR-SHP-001, 003, 005 | 📋 Pending | — |
 | **T-11** | Guest Order Tracking Endpoint + Rate Limiting | FR-HIS-001, FR-TRX-011 | 📋 Pending | — |
 | **T-12** | Audit Trail (Events, `RecordAuditLog` Listener, `AuditService`) | TRX-012 | 📋 Pending | — |
@@ -101,12 +101,14 @@ This roadmap was established in **Phase 2 (Technical Planning)** and is tracked 
 - Store Owner immediate cancellation is available at `POST /api/admin/orders/{id}/cancel`, requires a reason, and only accepts `processing` orders.
 - Cancellation does not restock paid items; restock remains gated by the manual refund flow (FR-INV-007).
 
-### 📋 T-09: Manual Refund Tracking
-- `RefundService` flags orders after paid cancellation or late payment.
+### ✅ T-09: Manual Refund Tracking (Verification Pending)
+- `RefundService` idempotently flags paid orders after cancellation or late payment.
 - Store Owner endpoint: `POST /api/admin/orders/{id}/refund/mark-refunded`:
   - Records refund execution time, notes, and actor.
   - Updates refund status to `refunded`.
-  - Conditionally restocks resellable items.
+  - Accepts resellable order item IDs, persists the selection, and restocks only those items atomically.
+- Restock is limited to item quantities with a corresponding converted reservation, so late payments on expired orders do not add stock that was never deducted.
+- A refund can only be marked as `refunded` once; the status transition and any stock changes share a database transaction.
 
 ### 📋 T-10: Shipment Management
 - Store Owner shipment creation: `POST /api/admin/orders/{id}/shipment`:
