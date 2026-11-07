@@ -57,3 +57,4 @@ test('createInvoice throws RuntimeException when Xendit API responds with error'
     expect(fn () => $adapter->createInvoice('order-1', 100, 'test@test.com'))
         ->toThrow(RuntimeException::class, 'Xendit invoice creation failed: Invalid amount');
 });
+
