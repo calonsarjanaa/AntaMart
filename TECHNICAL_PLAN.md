@@ -140,3 +140,7 @@ This roadmap was established in **Phase 2 (Technical Planning)** and is tracked 
 - Added a Known Limitations report covering payment, callback, queue, manual refund/shipping, guest access, security, and verification notes.
 - Final verification: run `php artisan test` and validate the API artifacts before commit.
 
+## Follow-on: UI Implementation
+
+The backend MVP is complete. The storefront and store-owner UI are tracked separately in [UI_IMPLEMENTATION_PLAN.md](UI_IMPLEMENTATION_PLAN.md), starting with the Laravel web foundation and minimum catalog read path.
+
