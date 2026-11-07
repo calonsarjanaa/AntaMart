@@ -21,7 +21,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 - Laravel Blade templates and the existing Vite build (`resources/views`, `resources/css`, `resources/js`).
 - Server-rendered pages and normal form submissions for core flows, with progressive JavaScript for cart interactions and small usability improvements.
-- Same-origin Laravel web routes and controllers. Reuse transaction services and validation rules where possible; avoid making browser code depend on cross-origin API configuration or exposing secrets.
+- Same-origin Laravel web routes and controllers, authenticated through Laravel's web session guard and protected by web CSRF middleware. Reuse transaction services and validation rules where possible; avoid making browser code depend on cross-origin API configuration or exposing secrets.
 - Responsive, keyboard-accessible layouts with visible focus, labels, validation feedback, and loading/empty/error states.
 
 ### Scope assumptions
@@ -38,7 +38,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 | Task | Title | Depends on | Status |
 |---|---|---|---|
-| **UI-00** | UI foundation, route strategy, and shared layout | — | 📋 Pending |
+| **UI-00** | UI foundation, route strategy, and shared layout | — | ✅ Implemented |
 | **UI-01** | Catalog data and storefront read path | UI-00 | 📋 Pending |
 | **UI-02** | Storefront shell and responsive design system | UI-00 | 📋 Pending |
 | **UI-03** | Product listing, detail, and stock states | UI-01, UI-02 | 📋 Pending |
@@ -59,7 +59,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 ## Detailed tasks and completion criteria
 
-### UI-00: UI foundation, route strategy, and shared layout
+### ✅ UI-00: UI foundation, route strategy, and shared layout
 
 - Replace the Laravel welcome page with a branded storefront entry point.
 - Define named web routes, controller/view organization, shared Blade layouts, navigation, flash messages, form error rendering, and reusable buttons/fields/badges.
@@ -67,7 +67,9 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 - Decide the web authentication/session approach and protect against CSRF on state-changing browser forms.
 - Add a consistent responsive container, typography, spacing, color tokens, focus states, and accessible semantic landmarks.
 
-**Done when:** the app has a working storefront shell and page navigation; owner pages cannot be opened by guests or customer-role accounts; a representative form shows server-side validation errors accessibly.
+**Done when:** the app has a working storefront shell and page navigation; owner pages cannot be opened by guests or customer-role accounts; shared session-status and validation-error presentation is available for later forms.
+
+**Implemented:** Replaced the Laravel welcome page with a responsive storefront landing shell, added shared Blade layout and reusable form-field/status-badge components, flash/error presentation, a role-protected owner placeholder, and HTML 403 handling. Browser pages use the web session and CSRF middleware; API role failures remain JSON. Owner sign-in and forms remain in UI-11; catalog and cart remain in UI-01 through UI-04.
 
 ### UI-01: Catalog data and storefront read path
 

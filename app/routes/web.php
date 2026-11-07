@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::view('/', 'storefront.home')->name('storefront.home');
+
+Route::view('/owner', 'owner.index')
+    ->middleware('role:store_owner')
+    ->name('owner.dashboard');
