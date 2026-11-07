@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\RefundController;
 use App\Http\Controllers\Admin\ShipmentController;
 use App\Http\Controllers\Storefront\CancellationRequestController;
 use App\Http\Controllers\Storefront\CheckoutController;
+use App\Http\Controllers\Storefront\GuestOrderTrackingController;
 use App\Http\Controllers\Storefront\RetryPaymentSessionController;
 use App\Http\Controllers\Webhook\XenditController;
 use Illuminate\Http\Request;
@@ -25,6 +26,9 @@ Route::post('/checkout', CheckoutController::class);
 
 // Retry / Re-create payment session
 Route::post('/orders/{id}/payment-session', RetryPaymentSessionController::class);
+
+// Guest order tracking
+Route::get('/track', GuestOrderTrackingController::class)->middleware('throttle:10,1');
 
 // Customer and guest order cancellation
 Route::post('/orders/{id}/cancellation-requests', [CancellationRequestController::class, 'store']);

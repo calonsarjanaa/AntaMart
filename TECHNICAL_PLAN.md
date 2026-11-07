@@ -18,7 +18,7 @@ This roadmap was established in **Phase 2 (Technical Planning)** and is tracked 
 | **T-08** | Cancellation Flow (`CancellationService` + Storefront & Admin Endpoints) | FR-CAN-001 to 005 | ✅ Implemented; verification pending | — |
 | **T-09** | Manual Refund Tracking (`RefundService` + Admin Mark-Refunded Endpoint) | FR-REF-001 to 005, FR-INV-007 | ✅ Implemented; verification pending | — |
 | **T-10** | Shipment Management (`ShipmentService` + Admin Tracking Endpoints) | FR-SHP-001, 003, 005 | ✅ Implemented; verification pending | — |
-| **T-11** | Guest Order Tracking Endpoint + Rate Limiting | FR-HIS-001, FR-TRX-011 | 📋 Pending | — |
+| **T-11** | Guest Order Tracking Endpoint + Rate Limiting | FR-HIS-001, FR-TRX-011 | ✅ Implemented; verification pending | — |
 | **T-12** | Audit Trail (Events, `RecordAuditLog` Listener, `AuditService`) | TRX-012 | 📋 Pending | — |
 | **T-13** | Comprehensive Integration & Feature Test Suite | All Requirements | 📋 Pending | — |
 | **T-14** | API Documentation & Known Limitations Report | Documentation | 📋 Pending | — |
@@ -117,9 +117,10 @@ This roadmap was established in **Phase 2 (Technical Planning)** and is tracked 
 - Store Owner delivery confirmation: `POST /api/admin/orders/{id}/shipment/confirm-delivery` records `delivered_at` and transitions the order to `completed`.
 - Courier integration remains outside this task; the current shipment endpoint creates manual shipments.
 
-### 📋 T-11: Guest Order Tracking
+### ✅ T-11: Guest Order Tracking (Verification Pending)
 - Public endpoint: `GET /api/track?order_id=...&email=...`
-- Requires exact match of Order ID and Guest Email.
+- Requires exact match of Order ID and Guest Email; authenticated customer orders are not returned by this endpoint.
+- Returns order items, payment and order state, shipment tracking and delivery timestamps, and refund status without exposing address or contact details.
 - Throttled per IP (`throttle:10,1`) to prevent brute-force lookups.
 
 ### 📋 T-12: Audit Trail
