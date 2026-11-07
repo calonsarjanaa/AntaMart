@@ -30,3 +30,4 @@ class VerifyXenditWebhook
         return $next($request);
     }
 }
+
