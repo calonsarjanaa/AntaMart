@@ -29,3 +29,4 @@ return new class extends Migration
         Schema::dropIfExists('cancellation_requests');
     }
 };
+

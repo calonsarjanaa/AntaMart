@@ -87,3 +87,4 @@ test('refunds table has manual tracking fields', function () {
         expect(Schema::hasColumn('refunds', $column))->toBeTrue("Column [{$column}] missing from refunds table.");
     }
 });
+
