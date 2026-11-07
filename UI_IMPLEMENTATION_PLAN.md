@@ -39,8 +39,8 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 | Task | Title | Depends on | Status |
 |---|---|---|---|
 | **UI-00** | UI foundation, route strategy, and shared layout | — | ✅ Implemented |
-| **UI-01** | Catalog data and storefront read path | UI-00 | 📋 Pending |
-| **UI-02** | Storefront shell and responsive design system | UI-00 | 📋 Pending |
+| **UI-01** | Catalog data and storefront read path | UI-00 | ✅ Implemented |
+| **UI-02** | Storefront shell and responsive design system | UI-00 | ✅ Implemented |
 | **UI-03** | Product listing, detail, and stock states | UI-01, UI-02 | 📋 Pending |
 | **UI-04** | Shopping cart | UI-02, UI-03 | 📋 Pending |
 | **UI-05** | Guest and customer checkout | UI-01, UI-04 | 📋 Pending |
@@ -69,9 +69,9 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 **Done when:** the app has a working storefront shell and page navigation; owner pages cannot be opened by guests or customer-role accounts; shared session-status and validation-error presentation is available for later forms.
 
-**Implemented:** Replaced the Laravel welcome page with a responsive storefront landing shell, added shared Blade layout and reusable form-field/status-badge components, flash/error presentation, a role-protected owner placeholder, and HTML 403 handling. Browser pages use the web session and CSRF middleware; API role failures remain JSON. Owner sign-in and forms remain in UI-11; catalog and cart remain in UI-01 through UI-04.
+**Implemented:** Replaced the Laravel welcome page with a responsive storefront landing shell, added shared Blade layout and reusable form-field/status-badge components, flash/error presentation, a role-protected owner placeholder, and HTML 403 handling. Browser pages use the web session and CSRF middleware; API role failures remain JSON. Owner sign-in and forms remain in UI-11; catalog presentation and cart remain in UI-02 through UI-04.
 
-### UI-01: Catalog data and storefront read path
+### ✅ UI-01: Catalog data and storefront read path
 
 - Design the smallest product entity/catalog representation needed for a real product name, description, and optional image, with one or more existing inventory-backed variants.
 - Preserve variant SKU, price, active state, available-stock calculation, and existing order item snapshots.
@@ -81,13 +81,17 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 **Done when:** migrations and seed data create browsable products; inactive or unavailable variants cannot be purchased; existing checkout and snapshot behavior remains intact.
 
-### UI-02: Storefront shell and responsive design system
+**Implemented:** Added the products table/model and variant relationship, backfilled product records for existing variant IDs, and added a product foreign key on databases that support adding constraints to an existing table (SQLite relies on application-level checks). Added `GET /api/products` with paginated active product/variant data and stock counts, plus synthetic local seed content. Checkout now requires active products and variants and snapshots product description/image data alongside variant details.
+
+### ✅ UI-02: Storefront shell and responsive design system
 
 - Build shared header, footer, navigation, content width, buttons, form fields, product cards, price display, status badges, alert panels, and empty/loading states.
 - Ensure usable layout at phone, tablet, and desktop widths.
 - Use local/system fonts and local assets by default; avoid adding a remote font/image dependency without need.
 
 **Done when:** storefront pages share a consistent layout, keyboard focus is visible, and the core shell works without horizontal overflow at mobile widths.
+
+**Implemented:** Added reusable alert, empty-state, loading-state, price, and product-card components; standardized shared layout colors and container tokens; added product-card stock/image/price styling and tablet/mobile layouts; and updated reduced-motion behavior to include animation.
 
 ### UI-03: Product listing, detail, and stock states
 
@@ -226,5 +230,5 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 3. **Accounts and operations:** UI-09 through UI-16 (customer history and store-owner console).
 4. **Release readiness:** UI-17 (end-to-end and accessibility review).
 
-The recommended first implementation task is **UI-00**. UI-01 should follow early because the current database does not yet contain enough product information to build a real catalog.
+The recommended next implementation task is **UI-02**, to finish the shared responsive design system, followed by **UI-03** to build product listing/detail pages on top of the catalog read path.
 

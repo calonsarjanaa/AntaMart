@@ -8,6 +8,7 @@ use App\Models\AuditLog;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\PaymentCallback;
+use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Refund;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -18,8 +19,9 @@ beforeEach(function () {
     $this->webhookToken = 'secret-test-webhook-token-999';
     config()->set('services.xendit.webhook_token', $this->webhookToken);
 
+    $product = Product::create(['id' => 1, 'name' => 'Test Product', 'slug' => 'test-product']);
     $this->variant = ProductVariant::create([
-        'product_id'     => 1,
+        'product_id'     => $product->id,
         'sku'            => 'VARIANT-01',
         'name'           => 'Test Product',
         'price'          => 100000.00,

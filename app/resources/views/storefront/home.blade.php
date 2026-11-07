@@ -27,11 +27,15 @@
     </section>
     <section class="collection-section" id="collection" aria-labelledby="collection-title">
         <div class="section-heading"><div><p class="eyebrow">A considered edit</p><h2 id="collection-title">The collection</h2></div><span class="section-count">01 — 04</span></div>
-        <div class="collection-empty">
-            <div class="empty-mark" aria-hidden="true">✳</div><p class="empty-title">Something good is taking shape.</p>
-            <p class="empty-copy">We’re putting the finishing touches on our first collection. Come back soon to find your new everyday favorite.</p>
-            <span class="empty-label"><span class="eyebrow-dot" aria-hidden="true"></span> First collection, coming soon</span>
-        </div>
+        <x-empty-state
+            class="collection-empty"
+            title="Something good is taking shape."
+            description="We’re putting the finishing touches on our first collection. Come back soon to find your new everyday favorite."
+        >
+            <x-slot:footer>
+                <span class="empty-label"><span class="eyebrow-dot" aria-hidden="true"></span> First collection, coming soon</span>
+            </x-slot:footer>
+        </x-empty-state>
     </section>
     <section class="story-section" id="our-story" aria-labelledby="story-title">
         <div class="story-number" aria-hidden="true">A.</div>

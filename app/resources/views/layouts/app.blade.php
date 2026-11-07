@@ -33,13 +33,13 @@
         </div>
     </header>
     @if (session('status'))
-        <div class="flash-message" role="status">{{ session('status') }}</div>
+        <x-alert tone="success" class="flash-message">{{ session('status') }}</x-alert>
     @endif
     @if ($errors->any())
-        <div class="flash-message flash-error" role="alert">
+        <x-alert tone="error" class="flash-message">
             <p>Please review the following:</p>
             <ul>@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
-        </div>
+        </x-alert>
     @endif
     <main id="main-content">@yield('content')</main>
     <footer class="site-footer">

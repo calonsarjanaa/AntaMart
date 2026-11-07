@@ -65,8 +65,10 @@ class CheckoutService
         }
 
         $variantIds = array_column($itemsData, 'product_variant_id');
-        $variants = ProductVariant::whereIn('id', $variantIds)
+        $variants = ProductVariant::with('product')
+            ->whereIn('id', $variantIds)
             ->where('is_active', true)
+            ->whereHas('product', fn ($query) => $query->where('is_active', true))
             ->get()
             ->keyBy('id');
 
@@ -141,7 +143,9 @@ class CheckoutService
                     'product_variant_id' => $variant->id,
                     'product_snapshot'   => [
                         'product_id' => $variant->product_id,
-                        'name'       => $variant->name,
+                        'name'       => $variant->product->name,
+                        'description' => $variant->product->description,
+                        'image_path' => $variant->product->image_path,
                     ],
                     'variant_snapshot'   => [
                         'variant_id' => $variant->id,

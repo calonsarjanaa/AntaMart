@@ -14,6 +14,37 @@ tags:
   - name: Store owner
   - name: Webhook
 paths:
+  /products:
+    get:
+      tags: [Storefront]
+      summary: List active catalog products
+      description: Returns active products with active variants, including available stock. Products are paginated 12 per page; stock availability is revalidated during checkout.
+      security: []
+      parameters:
+        - in: query
+          name: page
+          schema: {type: integer, minimum: 1, default: 1}
+      responses:
+        '200':
+          description: Product catalog page
+          content:
+            application/json:
+              example:
+                data:
+                  - id: 1
+                    name: Everyday Ceramic Mug
+                    slug: everyday-ceramic-mug
+                    description: A balanced stoneware mug with a soft matte glaze.
+                    image_url: null
+                    variants:
+                      - id: 1
+                        name: Oat
+                        sku: AM-MUG-OAT
+                        price: '185000.00'
+                        available_stock: 18
+                        in_stock: true
+                links: {first: 'http://localhost:8000/api/products?page=1', last: 'http://localhost:8000/api/products?page=1', prev: null, next: null}
+                meta: {current_page: 1, last_page: 1, per_page: 12, total: 1}
   /checkout:
     post:
       tags: [Storefront]

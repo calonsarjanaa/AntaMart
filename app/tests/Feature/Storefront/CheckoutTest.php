@@ -4,6 +4,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Models\AuditLog;
 use App\Models\Order;
+use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -11,8 +12,11 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
+    $productA = Product::create(['id' => 101, 'name' => 'Blue Cotton Shirt', 'slug' => 'blue-cotton-shirt']);
+    $productB = Product::create(['id' => 102, 'name' => 'Black Chino Pants', 'slug' => 'black-chino-pants']);
+
     $this->variantA = ProductVariant::create([
-        'product_id'     => 101,
+        'product_id'     => $productA->id,
         'sku'            => 'SHIRT-BLUE-M',
         'name'           => 'Blue Cotton Shirt (Medium)',
         'price'          => 150000.00,
@@ -22,7 +26,7 @@ beforeEach(function () {
     ]);
 
     $this->variantB = ProductVariant::create([
-        'product_id'     => 102,
+        'product_id'     => $productB->id,
         'sku'            => 'PANTS-BLACK-32',
         'name'           => 'Black Chino Pants (Size 32)',
         'price'          => 250000.00,
@@ -208,8 +212,9 @@ test('guest checkout validation fails when guest email is missing', function () 
 
 test('concurrent checkout requests for last unit only allow one to succeed per EC-01', function () {
     // Only 1 item physically available
+    $limitedProduct = Product::create(['id' => 103, 'name' => 'Rare Collector Item', 'slug' => 'rare-collector-item']);
     $limitedVariant = ProductVariant::create([
-        'product_id'     => 103,
+        'product_id'     => $limitedProduct->id,
         'sku'            => 'LIMITED-EDITION-01',
         'name'           => 'Rare Collector Item',
         'price'          => 1000000.00,
