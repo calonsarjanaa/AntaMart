@@ -4,6 +4,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\RefundStatus;
 use App\Models\InventoryReservation;
+use App\Models\AuditLog;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\PaymentCallback;
@@ -87,6 +88,9 @@ test('valid xendit callback marks order as processing and converts reservations 
         ->and($this->variant->fresh()->stock_physical)->toBe(8) // 10 - 2
         ->and($this->variant->fresh()->stock_reserved)->toBe(0) // 2 - 2
         ->and($this->variant->fresh()->available_stock)->toBe(8);
+
+    expect(AuditLog::where('order_id', $this->order->id)->where('event', 'payment.confirmed')->count())->toBe(1)
+        ->and(AuditLog::where('order_id', $this->order->id)->where('event', 'stock.deducted')->count())->toBe(1);
 });
 
 test('duplicate callback is handled idempotently without duplicate stock deductions per FR-PAY-005', function () {
@@ -115,7 +119,9 @@ test('duplicate callback is handled idempotently without duplicate stock deducti
 
     // Physical stock remains 8 (not decremented twice!)
     expect($this->variant->fresh()->stock_physical)->toBe(8)
-        ->and(PaymentCallback::where('xendit_payment_id', 'pay-duplicate-001')->count())->toBe(1);
+        ->and(PaymentCallback::where('xendit_payment_id', 'pay-duplicate-001')->count())->toBe(1)
+        ->and(AuditLog::where('order_id', $this->order->id)->where('event', 'payment.confirmed')->count())->toBe(1)
+        ->and(AuditLog::where('order_id', $this->order->id)->where('event', 'stock.deducted')->count())->toBe(1);
 });
 
 test('late payment on expired order leaves order expired and flags manual refund per FR-PAY-006', function () {
@@ -150,6 +156,9 @@ test('late payment on expired order leaves order expired and flags manual refund
     expect($refund)->not->toBeNull()
         ->and($refund->status)->toBe(RefundStatus::ManualRefundPending)
         ->and($refund->amount)->toBe('200000.00');
+
+    expect(AuditLog::where('order_id', $this->order->id)->where('event', 'payment.late_detected')->count())->toBe(1)
+        ->and(AuditLog::where('order_id', $this->order->id)->where('event', 'refund.flagged')->count())->toBe(1);
 });
 
 test('partial payment amount mismatch is flagged and does not transition order per TBD-05', function () {

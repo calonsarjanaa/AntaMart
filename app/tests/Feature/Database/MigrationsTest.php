@@ -13,6 +13,7 @@ test('database migrations create all required tables', function () {
         'order_addresses',
         'payments',
         'payment_callbacks',
+        'jobs',
         'inventory_reservations',
         'cancellation_requests',
         'refunds',
@@ -81,6 +82,7 @@ test('refunds table has manual tracking fields', function () {
         'refunded_by',
         'refunded_at',
         'notes',
+        'resellable_item_ids',
     ];
 
     foreach ($columns as $column) {

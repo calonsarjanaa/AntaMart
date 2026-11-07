@@ -2,6 +2,7 @@
 
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
+use App\Models\AuditLog;
 use App\Models\Order;
 use App\Models\ProductVariant;
 use App\Models\User;
@@ -77,6 +78,11 @@ test('guest checkout successfully creates order, snapshots, stock reservation, a
         ->and($this->variantA->fresh()->available_stock)->toBe(18)
         ->and($this->variantB->fresh()->stock_reserved)->toBe(1)
         ->and($this->variantB->fresh()->available_stock)->toBe(4);
+
+    $orderCreatedAudit = AuditLog::where('order_id', $order->id)->where('event', 'order.created')->first();
+    expect($orderCreatedAudit)->not->toBeNull()
+        ->and($orderCreatedAudit->actor_type)->toBe('guest')
+        ->and($orderCreatedAudit->payload['item_count'])->toBe(2);
 });
 
 test('authenticated customer checkout associates order with user', function () {
@@ -173,7 +179,8 @@ test('idempotency key prevents duplicate checkout and does not reserve double st
 
     // Stock was reserved exactly once (3 units, not 6)
     expect($this->variantA->fresh()->stock_reserved)->toBe(3)
-        ->and($this->variantA->fresh()->available_stock)->toBe(17);
+        ->and($this->variantA->fresh()->available_stock)->toBe(17)
+        ->and(AuditLog::where('order_id', $firstOrderId)->where('event', 'order.created')->count())->toBe(1);
 });
 
 test('guest checkout validation fails when guest email is missing', function () {

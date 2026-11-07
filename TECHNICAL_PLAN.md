@@ -20,7 +20,7 @@ This roadmap was established in **Phase 2 (Technical Planning)** and is tracked 
 | **T-10** | Shipment Management (`ShipmentService` + Admin Tracking Endpoints) | FR-SHP-001, 003, 005 | ✅ Implemented; verification pending | — |
 | **T-11** | Guest Order Tracking Endpoint + Rate Limiting | FR-HIS-001, FR-TRX-011 | ✅ Implemented; verification pending | — |
 | **T-12** | Audit Trail (Events, `RecordAuditLog` Listener, `AuditService`) | TRX-012 | ✅ Implemented; verification pending | — |
-| **T-13** | Comprehensive Integration & Feature Test Suite | All Requirements | 📋 Pending | — |
+| **T-13** | Comprehensive Integration & Feature Test Suite | All Requirements | ✅ Implemented | 70 tests, 355 assertions |
 | **T-14** | API Documentation & Known Limitations Report | Documentation | 📋 Pending | — |
 
 ---
@@ -129,8 +129,10 @@ This roadmap was established in **Phase 2 (Technical Planning)** and is tracked 
   - `order.created`, `payment.session_created`, `payment.confirmed`, `payment.expired`, `payment.late_detected`, `cancellation.requested`, `cancellation.approved`, `cancellation.rejected`, `cancellation.withdrawn`, `refund.flagged`, `refund.marked_refunded`, `stock.deducted`, `tracking.added`, `shipment.delivered`.
 - Audit inserts run inside the corresponding database transaction where the operation is transactional.
 
-### 📋 T-13: Comprehensive Test Suite
-- Full Pest feature tests covering all positive paths, negative paths, and the 16 identified edge cases.
+### ✅ T-13: Comprehensive Test Suite
+- Full Pest feature tests cover checkout/idempotency, payment session creation, callback handling and expiry, cancellation requests and decisions, refund/restock behavior, shipment/delivery workflows, guest order lookup, audit events, and migration structure.
+- Verified with `php artisan test`: 70 tests passed (355 assertions).
+- The roadmap refers to 16 identified edge cases, but no enumerated edge-case list is present in the repository. The suite covers documented requirements and implementation-derived edge cases; an exact 16-case mapping remains pending that source list.
 
 ### 📋 T-14: Documentation & Final Verification
 - API documentation, Postman collection / OpenAPI spec, and Known Limitations report.

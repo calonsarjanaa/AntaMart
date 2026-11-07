@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\OrderStatus;
+use App\Models\AuditLog;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\ProductVariant;
@@ -66,6 +67,10 @@ test('checkout creates Xendit invoice and populates payment record per FR-PAY-00
         ->and($payment->xendit_invoice_id)->toBe('inv_test_9999')
         ->and($payment->xendit_payment_url)->toBe('https://checkout.xendit.co/web/inv_test_9999')
         ->and($order->expires_at)->not->toBeNull();
+
+    $sessionAudit = AuditLog::where('order_id', $orderId)->where('event', 'payment.session_created')->first();
+    expect($sessionAudit)->not->toBeNull()
+        ->and($sessionAudit->payload['invoice_id'])->toBe('inv_test_9999');
 });
 
 test('checkout gracefully handles Xendit gateway outage per TBD-10 without rolling back order', function () {
