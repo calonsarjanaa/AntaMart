@@ -40,7 +40,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 |---|---|---|---|
 | **UI-00** | UI foundation, route strategy, and shared layout | — | ✅ Implemented |
 | **UI-01** | Catalog data and storefront read path | UI-00 | ✅ Implemented |
-| **UI-02** | Storefront shell and responsive design system | UI-00 | 📋 Pending |
+| **UI-02** | Storefront shell and responsive design system | UI-00 | ✅ Implemented |
 | **UI-03** | Product listing, detail, and stock states | UI-01, UI-02 | 📋 Pending |
 | **UI-04** | Shopping cart | UI-02, UI-03 | 📋 Pending |
 | **UI-05** | Guest and customer checkout | UI-01, UI-04 | 📋 Pending |
@@ -83,13 +83,15 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 **Implemented:** Added the products table/model and variant relationship, backfilled product records for existing variant IDs, and added a product foreign key on databases that support adding constraints to an existing table (SQLite relies on application-level checks). Added `GET /api/products` with paginated active product/variant data and stock counts, plus synthetic local seed content. Checkout now requires active products and variants and snapshots product description/image data alongside variant details.
 
-### UI-02: Storefront shell and responsive design system
+### ✅ UI-02: Storefront shell and responsive design system
 
 - Build shared header, footer, navigation, content width, buttons, form fields, product cards, price display, status badges, alert panels, and empty/loading states.
 - Ensure usable layout at phone, tablet, and desktop widths.
 - Use local/system fonts and local assets by default; avoid adding a remote font/image dependency without need.
 
 **Done when:** storefront pages share a consistent layout, keyboard focus is visible, and the core shell works without horizontal overflow at mobile widths.
+
+**Implemented:** Added reusable alert, empty-state, loading-state, price, and product-card components; standardized shared layout colors and container tokens; added product-card stock/image/price styling and tablet/mobile layouts; and updated reduced-motion behavior to include animation.
 
 ### UI-03: Product listing, detail, and stock states
 
