@@ -21,7 +21,7 @@ This roadmap was established in **Phase 2 (Technical Planning)** and is tracked 
 | **T-11** | Guest Order Tracking Endpoint + Rate Limiting | FR-HIS-001, FR-TRX-011 | ✅ Implemented; verification pending | — |
 | **T-12** | Audit Trail (Events, `RecordAuditLog` Listener, `AuditService`) | TRX-012 | ✅ Implemented; verification pending | — |
 | **T-13** | Comprehensive Integration & Feature Test Suite | All Requirements | ✅ Implemented | 70 tests, 355 assertions |
-| **T-14** | API Documentation & Known Limitations Report | Documentation | 📋 Pending | — |
+| **T-14** | API Documentation & Known Limitations Report | Documentation | ✅ Implemented | OpenAPI, Postman, setup & limits |
 
 ---
 
@@ -134,6 +134,9 @@ This roadmap was established in **Phase 2 (Technical Planning)** and is tracked 
 - Verified with `php artisan test`: 70 tests passed (355 assertions).
 - The roadmap refers to 16 identified edge cases, but no enumerated edge-case list is present in the repository. The suite covers documented requirements and implementation-derived edge cases; an exact 16-case mapping remains pending that source list.
 
-### 📋 T-14: Documentation & Final Verification
-- API documentation, Postman collection / OpenAPI spec, and Known Limitations report.
+### ✅ T-14: Documentation & Final Verification
+- Replaced the Laravel starter README with AntaMart setup, environment, queue worker, API reference, and test instructions.
+- Added an OpenAPI 3.0 contract for the current API routes and a Postman collection with configurable local, guest, store-owner, and webhook variables.
+- Added a Known Limitations report covering payment, callback, queue, manual refund/shipping, guest access, security, and verification notes.
+- Final verification: run `php artisan test` and validate the API artifacts before commit.
 
