@@ -53,3 +53,4 @@ class CancellationRequest extends Model
         return $this->status->isDecided();
     }
 }
+

@@ -47,3 +47,4 @@ class Refund extends Model
         return $this->status->isRefunded();
     }
 }
+

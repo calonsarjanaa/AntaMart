@@ -45,3 +45,4 @@ class Payment extends Model
         return $this->status === PaymentStatus::Expired;
     }
 }
+

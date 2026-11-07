@@ -118,3 +118,4 @@ test('audit log appends correctly without updated_at', function () {
         ->and($log->order->id)->toBe($order->id)
         ->and($log->payload)->toBe(['total' => 10000]);
 });
+

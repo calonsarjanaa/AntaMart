@@ -25,3 +25,4 @@ test('user role helpers identify store_owner and customer correctly', function (
         ->and($customer->isStoreOwner())->toBeFalse()
         ->and($customer->isCustomer())->toBeTrue();
 });
+

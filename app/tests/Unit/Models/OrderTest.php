@@ -114,3 +114,4 @@ test('order correctly relates to items, address, and payment', function () {
         ->and($order->address->id)->toBe($address->id)
         ->and($order->payment->id)->toBe($payment->id);
 });
+

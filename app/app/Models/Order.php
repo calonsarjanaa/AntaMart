@@ -114,3 +114,4 @@ class Order extends Model
         return $this->hasMany(AuditLog::class, 'order_id');
     }
 }
+

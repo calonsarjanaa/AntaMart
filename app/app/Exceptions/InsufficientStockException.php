@@ -3,6 +3,7 @@
 namespace App\Exceptions;
 
 use Exception;
+use Illuminate\Http\JsonResponse;
 
 class InsufficientStockException extends Exception
 {
@@ -14,5 +15,14 @@ class InsufficientStockException extends Exception
     ) {
         parent::__construct($message, 422);
     }
-}
 
+    public function render($request): JsonResponse
+    {
+        return response()->json([
+            'message' => $this->getMessage(),
+            'errors'  => [
+                'stock' => [$this->getMessage()],
+            ],
+        ], 422);
+    }
+}

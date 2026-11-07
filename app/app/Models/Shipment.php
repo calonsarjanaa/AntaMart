@@ -39,3 +39,4 @@ class Shipment extends Model
         return !is_null($this->delivered_at);
     }
 }
+

@@ -10,9 +10,9 @@ This roadmap was established in **Phase 2 (Technical Planning)** and is tracked 
 |---|---|---|:---:|---|
 | **T-01** | Domain Enums, Exceptions, & Base Adapter Interfaces | Foundation | ✅ Completed | `445c9b3` |
 | **T-02** | Database Migrations (12 tables + test suite) | FR-TRX-003, FR-INV-001 | ✅ Completed | `58be8b2` |
-| **T-03** | Eloquent Models & Model Relationships | — | ✅ Completed | `15135ae` |
-| **T-04** | Checkout Flow (`CheckoutService` + `CheckoutController` + `InventoryService` reserve) | FR-TRX-001 to 005, FR-INV-001 to 003 | ⏳ **Next** | — |
-| **T-05** | Xendit Adapter: Create Invoice Session | FR-PAY-001 | 📋 Pending | — |
+| **T-03** | Eloquent Models & Model Relationships | — | ✅ Completed | `18caf7b` |
+| **T-04** | Checkout Flow (`CheckoutService` + `CheckoutController` + `InventoryService` reserve) | FR-TRX-001 to 005, FR-INV-001 to 003 | ✅ Completed | `f94c560` |
+| **T-05** | Xendit Adapter: Create Invoice Session | FR-PAY-001 | ⏳ **Next** | — |
 | **T-06** | Xendit Webhook (`VerifyXenditWebhook` middleware + `XenditController` + `ProcessXenditCallback` job) | FR-PAY-003 to 006, FR-INV-004, FR-INV-005 | 📋 Pending | — |
 | **T-07** | Payment Expiry (`ExpireUnpaidOrder` job + reservation release) | FR-PAY-002, FR-INV-006 | 📋 Pending | — |
 | **T-08** | Cancellation Flow (`CancellationService` + Storefront & Admin Endpoints) | FR-CAN-001 to 005 | 📋 Pending | — |

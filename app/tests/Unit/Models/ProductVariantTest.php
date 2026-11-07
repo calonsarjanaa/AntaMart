@@ -26,3 +26,4 @@ test('available stock calculates physical minus reserved correctly per FR-INV-00
     $variant->stock_reserved = 15;
     expect($variant->available_stock)->toBe(0);
 });
+
