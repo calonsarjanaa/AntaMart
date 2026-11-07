@@ -42,7 +42,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 | **UI-01** | Catalog data and storefront read path | UI-00 | ✅ Implemented |
 | **UI-02** | Storefront shell and responsive design system | UI-00 | ✅ Implemented |
 | **UI-03** | Product listing, detail, and stock states | UI-01, UI-02 | ✅ Implemented |
-| **UI-04** | Shopping cart | UI-02, UI-03 | 📋 Pending |
+| **UI-04** | Shopping cart | UI-02, UI-03 | ✅ Implemented |
 | **UI-05** | Guest and customer checkout | UI-01, UI-04 | 📋 Pending |
 | **UI-06** | Payment handoff and order result page | UI-05 | 📋 Pending |
 | **UI-07** | Guest order tracking | UI-00, UI-02 | 📋 Pending |
@@ -106,12 +106,14 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 ### UI-04: Shopping cart
 
-- Add/remove variants, change quantity, display line totals and subtotal, and continue shopping or proceed to checkout.
-- Choose and document cart persistence (session or browser storage) so refresh behavior is predictable.
+- Add/remove variants, change quantity, display line totals and subtotal, and continue shopping.
+- Persist only variant IDs and quantities in the Laravel session; read current product names, prices, and stock from the database when rendering the cart.
 - Revalidate stock and price on the server at checkout; the cart display is never authoritative for final price or availability.
 - Handle unavailable or changed variants without losing the rest of the cart.
 
-**Done when:** cart changes persist according to the chosen policy, totals recalculate correctly, and server-side checkout remains the source of truth.
+**Done when:** cart changes persist in the session, totals recalculate from current database prices, stock changes are surfaced and correctable, and checkout continues to validate the final cart server-side. The checkout handoff/form is completed in UI-05.
+
+**Implemented:** Added session-backed add, update, and remove actions with server-side stock checks, a cart page with current item prices and subtotal, and an item count in the header. Inactive or unavailable items remain removable; the final checkout handoff is left for UI-05.
 
 ### UI-05: Guest and customer checkout
 

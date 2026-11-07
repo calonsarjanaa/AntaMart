@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Storefront\StorefrontController;
+use App\Http\Controllers\Storefront\CartController;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,6 +17,10 @@ use App\Http\Controllers\Storefront\StorefrontController;
 
 Route::get('/', [StorefrontController::class, 'index'])->name('storefront.home');
 Route::get('/products/{slug}', [StorefrontController::class, 'show'])->name('storefront.products.show');
+Route::get('/cart', [CartController::class, 'index'])->name('storefront.cart.index');
+Route::post('/cart/items', [CartController::class, 'store'])->name('storefront.cart.items.store');
+Route::patch('/cart/items/{variantId}', [CartController::class, 'update'])->name('storefront.cart.items.update');
+Route::delete('/cart/items/{variantId}', [CartController::class, 'destroy'])->name('storefront.cart.items.destroy');
 
 Route::view('/owner', 'owner.index')
     ->middleware('role:store_owner')

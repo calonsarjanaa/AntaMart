@@ -23,13 +23,13 @@
                 <input id="site-search" type="search" name="q" value="{{ request('q') }}" placeholder="Cari barang kebutuhanmu di sini...">
             </form>
             <div class="header-actions">
-                <span class="bag-link" aria-label="Keranjang, 0 item">
+                <a class="bag-link" href="{{ route('storefront.cart.index') }}" aria-label="Keranjang, {{ array_sum(session('cart', [])) }} item">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
                         <path d="M5 8.5h14l1 12H4l1-12Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
                         <path d="M9 9V6a3 3 0 0 1 6 0v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                     </svg>
-                    <span class="bag-count">0</span>
-                </span>
+                    <span class="bag-count">{{ array_sum(session('cart', [])) }}</span>
+                </a>
             </div>
         </div>
     </header>
