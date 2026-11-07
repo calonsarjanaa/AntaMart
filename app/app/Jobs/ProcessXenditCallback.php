@@ -80,44 +80,51 @@ class ProcessXenditCallback implements ShouldQueue
         }
 
         DB::transaction(function () use ($paymentId, $order, $amount, $raw, $inventoryService) {
+            // Serialize payment confirmation with expiry so only one path can release or consume stock.
+            $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->first();
+
+            if (!$lockedOrder || PaymentCallback::where('xendit_payment_id', $paymentId)->exists()) {
+                return;
+            }
+
             // Record processed callback
             PaymentCallback::create([
                 'xendit_payment_id' => $paymentId,
-                'order_id'          => $order->id,
+                'order_id'          => $lockedOrder->id,
                 'event_type'        => 'payment.succeeded',
                 'payload'           => $raw,
                 'processed_at'      => now(),
             ]);
 
-            $payment = Payment::firstOrNew(['order_id' => $order->id]);
+            $payment = Payment::firstOrNew(['order_id' => $lockedOrder->id]);
             $payment->amount = $amount;
 
             // Scenario 1: Normal Flow — Order is in pending_payment
-            if ($order->status === OrderStatus::PendingPayment) {
+            if ($lockedOrder->status === OrderStatus::PendingPayment) {
                 $payment->status = PaymentStatus::Paid;
                 $payment->paid_at = now();
                 $payment->save();
 
                 // State transition: pending_payment -> processing
-                $order->transitionTo(OrderStatus::Processing);
+                $lockedOrder->transitionTo(OrderStatus::Processing);
 
                 // FR-INV-004 & FR-INV-005: Convert reservation to physical deduction atomically
-                $inventoryService->convertReservationsToPhysicalDeduction($order);
+                $inventoryService->convertReservationsToPhysicalDeduction($lockedOrder);
 
-                Log::info("Order [{$order->id}] successfully transitioned to processing via Xendit payment [{$paymentId}].");
+                Log::info("Order [{$lockedOrder->id}] successfully transitioned to processing via Xendit payment [{$paymentId}].");
                 return;
             }
 
             // Scenario 2: Late Payment Reconciliation per FR-PAY-006 & REF-BR-05
             // If payment is received after order expired: order remains expired, payment is logged, manual refund is flagged
-            if ($order->status === OrderStatus::Expired) {
+            if ($lockedOrder->status === OrderStatus::Expired) {
                 $payment->status = PaymentStatus::Paid;
                 $payment->paid_at = now();
                 $payment->late_payment_detected_at = now();
                 $payment->save();
 
                 Refund::updateOrCreate(
-                    ['order_id' => $order->id],
+                    ['order_id' => $lockedOrder->id],
                     [
                         'amount' => $amount,
                         'reason' => 'Late payment received after order had expired.',
@@ -125,8 +132,8 @@ class ProcessXenditCallback implements ShouldQueue
                     ]
                 );
 
-                Log::warning("Late payment detected for expired order [{$order->id}]. Flagged for manual refund.", [
-                    'order_id'   => $order->id,
+                Log::warning("Late payment detected for expired order [{$lockedOrder->id}]. Flagged for manual refund.", [
+                    'order_id'   => $lockedOrder->id,
                     'payment_id' => $paymentId,
                     'amount'     => $amount,
                 ]);
@@ -134,3 +141,4 @@ class ProcessXenditCallback implements ShouldQueue
         });
     }
 }
+

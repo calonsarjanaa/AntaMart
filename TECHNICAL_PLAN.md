@@ -14,7 +14,7 @@ This roadmap was established in **Phase 2 (Technical Planning)** and is tracked 
 | **T-04** | Checkout Flow (`CheckoutService` + `CheckoutController` + `InventoryService` reserve) | FR-TRX-001 to 005, FR-INV-001 to 003 | ✅ Completed | `f45463a` |
 | **T-05** | Xendit Adapter: Create Invoice Session | FR-PAY-001 | ✅ Completed | `77d46c3` |
 | **T-06** | Xendit Webhook (`VerifyXenditWebhook` middleware + `XenditController` + `ProcessXenditCallback` job) | FR-PAY-003 to 006, FR-INV-004, FR-INV-005 | ✅ Completed | `f7eac69` |
-| **T-07** | Payment Expiry (`ExpireUnpaidOrder` job + reservation release) | FR-PAY-002, FR-INV-006 | ⏳ **Next** | — |
+| **T-07** | Payment Expiry (`ExpireUnpaidOrder` job + reservation release) | FR-PAY-002, FR-INV-006 | ✅ Implemented; verification pending | — |
 | **T-08** | Cancellation Flow (`CancellationService` + Storefront & Admin Endpoints) | FR-CAN-001 to 005 | 📋 Pending | — |
 | **T-09** | Manual Refund Tracking (`RefundService` + Admin Mark-Refunded Endpoint) | FR-REF-001 to 005, FR-INV-007 | 📋 Pending | — |
 | **T-10** | Shipment Management (`ShipmentService` + Admin Tracking Endpoints) | FR-SHP-001, 003, 005 | 📋 Pending | — |
@@ -50,7 +50,7 @@ This roadmap was established in **Phase 2 (Technical Planning)** and is tracked 
   10. `audit_logs` (append-only audit trail).
   11. `product_variants` (physical & reserved stock columns).
 
-### ⏳ T-03: Eloquent Models & Relationships (Current Task)
+### ✅ T-03: Eloquent Models & Relationships
 - Define Eloquent models in `app/Models/`:
   - `Order`, `OrderItem`, `OrderAddress`, `Payment`, `PaymentCallback`, `InventoryReservation`, `CancellationRequest`, `Refund`, `Shipment`, `AuditLog`, `ProductVariant`, `User`.
 - Wire up relationships (`hasMany`, `belongsTo`, `hasOne`).
@@ -58,7 +58,7 @@ This roadmap was established in **Phase 2 (Technical Planning)** and is tracked 
 - Add helper scopes and methods.
 - Write unit tests for models and relationships.
 
-### 📋 T-04: Checkout Flow
+### ✅ T-04: Checkout Flow
 - Implement `InventoryService::reserveStock()` with atomic database query (`stock_physical - stock_reserved >= requested`).
 - Implement `CheckoutService::checkout()`:
   - Validates cart & active products.
@@ -67,12 +67,12 @@ This roadmap was established in **Phase 2 (Technical Planning)** and is tracked 
   - Deduplicates checkout using `idempotency_key`.
 - Implement `CheckoutController` for both Auth and Guest users.
 
-### 📋 T-05: Xendit Adapter (Invoice Creation)
+### ✅ T-05: Xendit Adapter (Invoice Creation)
 - Implement concrete HTTP client call in `XenditAdapter::createInvoice()`.
 - Configure 15-minute validity window on Xendit invoice.
 - Link returned invoice ID and checkout URL to the order's payment record.
 
-### 📋 T-06: Xendit Webhook Processing
+### ✅ T-06: Xendit Webhook Processing
 - Implement `VerifyXenditWebhook` middleware using constant-time `hash_equals` on `x-callback-token`.
 - Implement `XenditController` (returns `200 OK` immediately).
 - Implement `ProcessXenditCallback` job:
@@ -81,12 +81,15 @@ This roadmap was established in **Phase 2 (Technical Planning)** and is tracked 
   - Transition order to `processing`.
   - Handle late payments (flag for manual refund if order already expired).
 
-### 📋 T-07: Payment Expiry Flow
-- Implement `ExpireUnpaidOrder` queued job (delayed by 15 minutes).
+### ✅ T-07: Payment Expiry Flow (Verification Pending)
+- Dispatch `ExpireUnpaidOrder` on the database queue after the gateway invoice expiry is stored.
 - If order is still `pending_payment`:
   - Transition order to `expired`.
+  - Mark the payment `expired`.
   - Release reserved inventory atomically (`stock_reserved - quantity`).
   - Fire `PaymentExpired` event for audit logging.
+- Payment and expiry transactions lock the order row so only one can consume or release its reservations.
+- Run a Laravel database queue worker (`php artisan queue:work database`) for delayed expiry jobs to execute.
 
 ### 📋 T-08: Cancellation Flow
 - Customer submission: only on `processing` orders, creates `cancellation_requests` record.

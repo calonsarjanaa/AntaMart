@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Adapters\Payment\PaymentGatewayInterface;
 use App\Enums\OrderStatus;
+use App\Jobs\ExpireUnpaidOrder;
 use App\Exceptions\InvalidOrderStateException;
 use App\Models\Order;
 use App\Models\Payment;
@@ -60,6 +61,10 @@ class PaymentService
                     'expired_at'         => $expiresAt,
                 ]
             );
+
+            ExpireUnpaidOrder::dispatch($order->id)
+                ->onConnection('database')
+                ->delay($expiresAt);
 
             return $invoice;
         } catch (Exception $e) {

@@ -7,6 +7,7 @@ use App\Models\InventoryReservation;
 use App\Models\Order;
 use App\Models\ProductVariant;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class InventoryService
 {
@@ -60,18 +61,29 @@ class InventoryService
      */
     public function releaseReservations(Order $order): void
     {
-        $reservations = $order->reservations()->where('status', 'reserved')->get();
+        DB::transaction(function () use ($order): void {
+            $reservations = $order->reservations()
+                ->where('status', 'reserved')
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
 
-        foreach ($reservations as $reservation) {
-            DB::table('product_variants')
-                ->where('id', $reservation->product_variant_id)
-                ->decrement('stock_reserved', $reservation->quantity);
+            foreach ($reservations as $reservation) {
+                $updated = DB::table('product_variants')
+                    ->where('id', $reservation->product_variant_id)
+                    ->where('stock_reserved', '>=', $reservation->quantity)
+                    ->decrement('stock_reserved', $reservation->quantity);
 
-            $reservation->update([
-                'status'      => 'released',
-                'released_at' => now(),
-            ]);
-        }
+                if ($updated !== 1) {
+                    throw new RuntimeException("Reserved stock is inconsistent for product variant [{$reservation->product_variant_id}].");
+                }
+
+                $reservation->update([
+                    'status'      => 'released',
+                    'released_at' => now(),
+                ]);
+            }
+        });
     }
 
     /**
