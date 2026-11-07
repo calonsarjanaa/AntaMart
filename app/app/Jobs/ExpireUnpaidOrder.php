@@ -24,17 +24,17 @@ class ExpireUnpaidOrder implements ShouldQueue
 
     public function handle(InventoryService $inventoryService): void
     {
-        $expiredOrder = DB::transaction(function () use ($inventoryService): ?Order {
+        DB::transaction(function () use ($inventoryService): void {
             $order = Order::whereKey($this->orderId)->lockForUpdate()->first();
 
             if (!$order || $order->status !== OrderStatus::PendingPayment || !$order->expires_at || $order->expires_at->isFuture()) {
-                return null;
+                return;
             }
 
             $payment = $order->payment()->lockForUpdate()->first();
 
             if (!$payment || $payment->status !== PaymentStatus::Pending) {
-                return null;
+                return;
             }
 
             $order->transitionTo(OrderStatus::Expired);
@@ -43,11 +43,7 @@ class ExpireUnpaidOrder implements ShouldQueue
 
             $inventoryService->releaseReservations($order);
 
-            return $order;
+            PaymentExpired::dispatch($order);
         });
-
-        if ($expiredOrder) {
-            PaymentExpired::dispatch($expiredOrder);
-        }
     }
 }

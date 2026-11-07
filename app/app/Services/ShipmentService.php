@@ -3,16 +3,18 @@
 namespace App\Services;
 
 use App\Enums\OrderStatus;
+use App\Events\AuditEvent;
 use App\Models\Order;
 use App\Models\Shipment;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class ShipmentService
 {
-    public function createManualShipment(Order $order, string $trackingNumber, ?string $trackingUrl = null): Shipment
+    public function createManualShipment(Order $order, User $owner, string $trackingNumber, ?string $trackingUrl = null): Shipment
     {
-        return DB::transaction(function () use ($order, $trackingNumber, $trackingUrl): Shipment {
+        return DB::transaction(function () use ($order, $owner, $trackingNumber, $trackingUrl): Shipment {
             $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
 
             if ($order->status !== OrderStatus::Processing) {
@@ -29,18 +31,31 @@ class ShipmentService
 
             $order->transitionTo(OrderStatus::Shipped);
 
-            return $order->shipment()->create([
+            $shipment = $order->shipment()->create([
                 'method'          => 'manual',
                 'tracking_number' => $trackingNumber,
                 'tracking_url'    => $trackingUrl,
                 'shipped_at'      => now(),
             ]);
+
+            AuditEvent::dispatch(
+                'tracking.added',
+                $order->id,
+                $owner->id,
+                $owner->role,
+                [
+                    'shipment_id' => $shipment->id,
+                    'method'      => $shipment->method,
+                ]
+            );
+
+            return $shipment;
         });
     }
 
-    public function confirmDelivery(Order $order): Shipment
+    public function confirmDelivery(Order $order, User $owner): Shipment
     {
-        return DB::transaction(function () use ($order): Shipment {
+        return DB::transaction(function () use ($order, $owner): Shipment {
             $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
 
             if ($order->status !== OrderStatus::Shipped) {
@@ -60,6 +75,14 @@ class ShipmentService
             $shipment->delivered_at = now();
             $shipment->save();
             $order->transitionTo(OrderStatus::Completed);
+
+            AuditEvent::dispatch(
+                'shipment.delivered',
+                $order->id,
+                $owner->id,
+                $owner->role,
+                ['shipment_id' => $shipment->id]
+            );
 
             return $shipment->fresh();
         });

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Adapters\Shipping\ShippingProviderInterface;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
+use App\Events\AuditEvent;
 use App\Exceptions\InsufficientStockException;
 use App\Models\Order;
 use App\Models\OrderAddress;
@@ -177,6 +178,17 @@ class CheckoutService
                 'amount'   => $total,
                 'status'   => PaymentStatus::Pending,
             ]);
+
+            AuditEvent::dispatch(
+                'order.created',
+                $order->id,
+                $user?->id,
+                $user ? 'customer' : 'guest',
+                [
+                    'total'      => $order->total,
+                    'item_count' => count($preparedItems),
+                ]
+            );
 
             return $order->load(['items', 'address', 'payment']);
         });

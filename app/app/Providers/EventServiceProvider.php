@@ -2,10 +2,12 @@
 
 namespace App\Providers;
 
+use App\Events\AuditEvent;
+use App\Events\PaymentExpired;
+use App\Listeners\RecordAuditLog;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
-use Illuminate\Support\Facades\Event;
 
 class EventServiceProvider extends ServiceProvider
 {
@@ -15,6 +17,12 @@ class EventServiceProvider extends ServiceProvider
      * @var array<class-string, array<int, class-string>>
      */
     protected $listen = [
+        AuditEvent::class => [
+            RecordAuditLog::class,
+        ],
+        PaymentExpired::class => [
+            RecordAuditLog::class.'@handlePaymentExpired',
+        ],
         Registered::class => [
             SendEmailVerificationNotification::class,
         ],

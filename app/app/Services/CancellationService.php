@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\CancellationStatus;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
+use App\Events\AuditEvent;
 use App\Models\CancellationRequest as CancellationRequestModel;
 use App\Models\Order;
 use App\Models\User;
@@ -39,11 +40,21 @@ class CancellationService
                 ]);
             }
 
-            return $order->cancellationRequests()->create([
+            $cancellationRequest = $order->cancellationRequests()->create([
                 'requested_by' => $user?->id,
                 'reason'       => $reason,
                 'status'       => CancellationStatus::Pending,
             ]);
+
+            AuditEvent::dispatch(
+                'cancellation.requested',
+                $order->id,
+                $user?->id,
+                $user?->role ?? 'guest',
+                ['cancellation_request_id' => $cancellationRequest->id]
+            );
+
+            return $cancellationRequest;
         });
     }
 
@@ -68,6 +79,14 @@ class CancellationService
                 'status'       => CancellationStatus::Withdrawn,
                 'withdrawn_at' => now(),
             ]);
+
+            AuditEvent::dispatch(
+                'cancellation.withdrawn',
+                $order->id,
+                $user?->id,
+                $user?->role ?? 'guest',
+                ['cancellation_request_id' => $cancellationRequest->id]
+            );
 
             return $cancellationRequest->fresh();
         });
@@ -99,7 +118,7 @@ class CancellationService
             ];
 
             if ($decision === 'approve') {
-                $this->cancelProcessingOrder($order, $cancellationRequest->reason);
+                $this->cancelProcessingOrder($order, $cancellationRequest->reason, $owner);
                 $decisionData['status'] = CancellationStatus::Approved;
             } else {
                 $decisionData['status'] = CancellationStatus::Rejected;
@@ -107,6 +126,14 @@ class CancellationService
             }
 
             $cancellationRequest->update($decisionData);
+
+            AuditEvent::dispatch(
+                $decision === 'approve' ? 'cancellation.approved' : 'cancellation.rejected',
+                $order->id,
+                $owner->id,
+                $owner->role,
+                ['cancellation_request_id' => $cancellationRequest->id]
+            );
 
             return $cancellationRequest->fresh();
         });
@@ -116,31 +143,57 @@ class CancellationService
     {
         return DB::transaction(function () use ($order, $owner, $reason): CancellationRequestModel {
             $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
-            $this->cancelProcessingOrder($order, $reason);
+            $this->cancelProcessingOrder($order, $reason, $owner);
 
             $now = now();
 
-            $order->cancellationRequests()
+            $pendingRequests = $order->cancellationRequests()
                 ->where('status', CancellationStatus::Pending->value)
                 ->whereNull('decided_at')
-                ->update([
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($pendingRequests as $pendingRequest) {
+                $pendingRequest->update([
                     'status'     => CancellationStatus::Approved->value,
                     'decided_by' => $owner->id,
                     'decided_at' => $now,
-                    'updated_at' => $now,
                 ]);
 
-            return $order->cancellationRequests()->create([
+                AuditEvent::dispatch(
+                    'cancellation.approved',
+                    $order->id,
+                    $owner->id,
+                    $owner->role,
+                    ['cancellation_request_id' => $pendingRequest->id]
+                );
+            }
+
+            $cancellationRequest = $order->cancellationRequests()->create([
                 'requested_by' => null,
                 'reason'       => $reason,
                 'status'       => CancellationStatus::Approved,
                 'decided_by'   => $owner->id,
                 'decided_at'   => $now,
             ]);
+
+            AuditEvent::dispatch(
+                'cancellation.approved',
+                $order->id,
+                $owner->id,
+                $owner->role,
+                [
+                    'cancellation_request_id' => $cancellationRequest->id,
+                    'owner_initiated'          => true,
+                ]
+            );
+
+            return $cancellationRequest;
         });
     }
 
-    private function cancelProcessingOrder(Order $order, string $reason): void
+    private function cancelProcessingOrder(Order $order, string $reason, User $actor): void
     {
         if ($order->status !== OrderStatus::Processing) {
             throw ValidationException::withMessages([
@@ -152,7 +205,7 @@ class CancellationService
         $order->transitionTo(OrderStatus::Cancelled);
 
         if ($payment?->status === PaymentStatus::Paid) {
-            $this->refundService->flagForOrder($order, "Order cancellation: {$reason}");
+            $this->refundService->flagForOrder($order, "Order cancellation: {$reason}", $actor);
         }
     }
 

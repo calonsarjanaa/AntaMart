@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
+use App\Events\AuditEvent;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\PaymentCallback;
@@ -110,6 +111,17 @@ class ProcessXenditCallback implements ShouldQueue
                 // FR-INV-004 & FR-INV-005: Convert reservation to physical deduction atomically
                 $inventoryService->convertReservationsToPhysicalDeduction($lockedOrder);
 
+                AuditEvent::dispatch(
+                    'payment.confirmed',
+                    $lockedOrder->id,
+                    null,
+                    'system',
+                    [
+                        'payment_id' => $paymentId,
+                        'amount'     => $amount,
+                    ]
+                );
+
                 Log::info("Order [{$lockedOrder->id}] successfully transitioned to processing via Xendit payment [{$paymentId}].");
                 return;
             }
@@ -123,6 +135,17 @@ class ProcessXenditCallback implements ShouldQueue
                 $payment->save();
 
                 $refundService->flagForOrder($lockedOrder, 'Late payment received after order had expired.');
+
+                AuditEvent::dispatch(
+                    'payment.late_detected',
+                    $lockedOrder->id,
+                    null,
+                    'system',
+                    [
+                        'payment_id' => $paymentId,
+                        'amount'     => $amount,
+                    ]
+                );
 
                 Log::warning("Late payment detected for expired order [{$lockedOrder->id}]. Flagged for manual refund.", [
                     'order_id'   => $lockedOrder->id,

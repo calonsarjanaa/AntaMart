@@ -23,6 +23,7 @@ class ShipmentController extends Controller
 
         $shipment = $this->shipmentService->createManualShipment(
             Order::findOrFail($id),
+            $request->user(),
             $data['tracking_number'],
             $data['tracking_url'] ?? null
         );
@@ -39,9 +40,9 @@ class ShipmentController extends Controller
         ], 201);
     }
 
-    public function confirmDelivery(string $id): JsonResponse
+    public function confirmDelivery(Request $request, string $id): JsonResponse
     {
-        $shipment = $this->shipmentService->confirmDelivery(Order::findOrFail($id));
+        $shipment = $this->shipmentService->confirmDelivery(Order::findOrFail($id), $request->user());
 
         return response()->json([
             'message' => 'Delivery confirmed.',

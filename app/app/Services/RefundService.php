@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\PaymentStatus;
 use App\Enums\RefundStatus;
+use App\Events\AuditEvent;
 use App\Models\Order;
 use App\Models\Refund;
 use App\Models\User;
@@ -13,7 +14,7 @@ use RuntimeException;
 
 class RefundService
 {
-    public function flagForOrder(Order $order, string $reason): ?Refund
+    public function flagForOrder(Order $order, string $reason, ?User $actor = null): ?Refund
     {
         $payment = $order->payment()->first();
 
@@ -28,6 +29,17 @@ class RefundService
             $refund->reason = $reason;
             $refund->status = RefundStatus::ManualRefundPending;
             $refund->save();
+
+            AuditEvent::dispatch(
+                'refund.flagged',
+                $order->id,
+                $actor?->id,
+                $actor?->role ?? 'system',
+                [
+                    'refund_id' => $refund->id,
+                    'amount'    => $refund->amount,
+                ]
+            );
         }
 
         return $refund;
@@ -104,6 +116,17 @@ class RefundService
                 'notes'                => $notes,
                 'resellable_item_ids'  => $itemIds,
             ]);
+
+            AuditEvent::dispatch(
+                'refund.marked_refunded',
+                $order->id,
+                $owner->id,
+                $owner->role,
+                [
+                    'amount'              => $refund->amount,
+                    'resellable_item_ids' => $itemIds,
+                ]
+            );
 
             return $refund->fresh();
         });

@@ -4,12 +4,14 @@ namespace App\Services;
 
 use App\Adapters\Payment\PaymentGatewayInterface;
 use App\Enums\OrderStatus;
-use App\Jobs\ExpireUnpaidOrder;
+use App\Events\AuditEvent;
 use App\Exceptions\InvalidOrderStateException;
+use App\Jobs\ExpireUnpaidOrder;
 use App\Models\Order;
 use App\Models\Payment;
 use Carbon\Carbon;
 use Exception;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class PaymentService
@@ -47,24 +49,38 @@ class PaymentService
 
             $expiresAt = Carbon::parse($invoice['expires_at']);
 
-            // Update order and payment records with gateway invoice details
-            $order->update([
-                'expires_at' => $expiresAt,
-            ]);
+            DB::transaction(function () use ($order, $invoice, $expiresAt): void {
+                // Record gateway session details, audit event, and expiry job atomically.
+                $order->update([
+                    'expires_at' => $expiresAt,
+                ]);
 
-            Payment::updateOrCreate(
-                ['order_id' => $order->id],
-                [
-                    'xendit_invoice_id'  => $invoice['id'],
-                    'xendit_payment_url' => $invoice['payment_url'],
-                    'amount'             => $order->total,
-                    'expired_at'         => $expiresAt,
-                ]
-            );
+                Payment::updateOrCreate(
+                    ['order_id' => $order->id],
+                    [
+                        'xendit_invoice_id'  => $invoice['id'],
+                        'xendit_payment_url' => $invoice['payment_url'],
+                        'amount'             => $order->total,
+                        'expired_at'         => $expiresAt,
+                    ]
+                );
 
-            ExpireUnpaidOrder::dispatch($order->id)
-                ->onConnection('database')
-                ->delay($expiresAt);
+                AuditEvent::dispatch(
+                    'payment.session_created',
+                    $order->id,
+                    $order->customer_id,
+                    $order->customer_id ? 'customer' : 'guest',
+                    [
+                        'invoice_id' => $invoice['id'],
+                        'amount'     => $order->total,
+                        'expires_at' => $expiresAt->toIso8601String(),
+                    ]
+                );
+
+                ExpireUnpaidOrder::dispatch($order->id)
+                    ->onConnection('database')
+                    ->delay($expiresAt);
+            });
 
             return $invoice;
         } catch (Exception $e) {

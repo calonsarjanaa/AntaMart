@@ -19,7 +19,7 @@ This roadmap was established in **Phase 2 (Technical Planning)** and is tracked 
 | **T-09** | Manual Refund Tracking (`RefundService` + Admin Mark-Refunded Endpoint) | FR-REF-001 to 005, FR-INV-007 | ✅ Implemented; verification pending | — |
 | **T-10** | Shipment Management (`ShipmentService` + Admin Tracking Endpoints) | FR-SHP-001, 003, 005 | ✅ Implemented; verification pending | — |
 | **T-11** | Guest Order Tracking Endpoint + Rate Limiting | FR-HIS-001, FR-TRX-011 | ✅ Implemented; verification pending | — |
-| **T-12** | Audit Trail (Events, `RecordAuditLog` Listener, `AuditService`) | TRX-012 | 📋 Pending | — |
+| **T-12** | Audit Trail (Events, `RecordAuditLog` Listener, `AuditService`) | TRX-012 | ✅ Implemented; verification pending | — |
 | **T-13** | Comprehensive Integration & Feature Test Suite | All Requirements | 📋 Pending | — |
 | **T-14** | API Documentation & Known Limitations Report | Documentation | 📋 Pending | — |
 
@@ -123,10 +123,11 @@ This roadmap was established in **Phase 2 (Technical Planning)** and is tracked 
 - Returns order items, payment and order state, shipment tracking and delivery timestamps, and refund status without exposing address or contact details.
 - Throttled per IP (`throttle:10,1`) to prevent brute-force lookups.
 
-### 📋 T-12: Audit Trail
-- Event listeners for all critical operations:
-  - `order.created`, `payment.session_created`, `payment.confirmed`, `payment.expired`, `payment.late_detected`, `cancellation.requested`, `cancellation.approved`, `cancellation.rejected`, `cancellation.withdrawn`, `refund.flagged`, `refund.marked_refunded`, `stock.deducted`, `tracking.added`.
-- Recorded into `audit_logs` table.
+### ✅ T-12: Audit Trail (Verification Pending)
+- `AuditEvent` and `PaymentExpired` are recorded by the synchronous `RecordAuditLog` listener through `AuditService`.
+- Successful critical operations record actor, order, event name, and minimal event metadata in `audit_logs`:
+  - `order.created`, `payment.session_created`, `payment.confirmed`, `payment.expired`, `payment.late_detected`, `cancellation.requested`, `cancellation.approved`, `cancellation.rejected`, `cancellation.withdrawn`, `refund.flagged`, `refund.marked_refunded`, `stock.deducted`, `tracking.added`, `shipment.delivered`.
+- Audit inserts run inside the corresponding database transaction where the operation is transactional.
 
 ### 📋 T-13: Comprehensive Test Suite
 - Full Pest feature tests covering all positive paths, negative paths, and the 16 identified edge cases.

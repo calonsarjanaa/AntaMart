@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Exceptions\InsufficientStockException;
+use App\Events\AuditEvent;
 use App\Models\InventoryReservation;
 use App\Models\Order;
 use App\Models\ProductVariant;
@@ -94,6 +95,7 @@ class InventoryService
     public function convertReservationsToPhysicalDeduction(Order $order): void
     {
         $reservations = $order->reservations()->where('status', 'reserved')->get();
+        $deductedItems = [];
 
         foreach ($reservations as $reservation) {
             DB::table('product_variants')
@@ -107,6 +109,21 @@ class InventoryService
             $reservation->update([
                 'status' => 'converted',
             ]);
+
+            $deductedItems[] = [
+                'product_variant_id' => $reservation->product_variant_id,
+                'quantity'           => $reservation->quantity,
+            ];
+        }
+
+        if ($deductedItems !== []) {
+            AuditEvent::dispatch(
+                'stock.deducted',
+                $order->id,
+                null,
+                'system',
+                ['items' => $deductedItems]
+            );
         }
     }
 }
