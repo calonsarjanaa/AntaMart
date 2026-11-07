@@ -52,6 +52,7 @@ The API is served below `/api`. The queue worker is needed for delayed order-exp
 - [Postman collection](../docs/AntaMart.postman_collection.json)
 - [Known limitations and operational notes](../docs/KNOWN_LIMITATIONS.md)
 - [Implementation roadmap](../TECHNICAL_PLAN.md)
+- [Overall UI implementation plan](../UI_IMPLEMENTATION_PLAN.md)
 
 All API requests and responses use JSON. Store-owner routes require a Sanctum-authenticated user with the `store_owner` role. The customer authentication flow is outside this MVP; use an existing Sanctum token for authenticated routes.
 
