@@ -41,7 +41,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 | **UI-00** | UI foundation, route strategy, and shared layout | — | ✅ Implemented |
 | **UI-01** | Catalog data and storefront read path | UI-00 | ✅ Implemented |
 | **UI-02** | Storefront shell and responsive design system | UI-00 | ✅ Implemented |
-| **UI-03** | Product listing, detail, and stock states | UI-01, UI-02 | 📋 Pending |
+| **UI-03** | Product listing, detail, and stock states | UI-01, UI-02 | ✅ Implemented |
 | **UI-04** | Shopping cart | UI-02, UI-03 | 📋 Pending |
 | **UI-05** | Guest and customer checkout | UI-01, UI-04 | 📋 Pending |
 | **UI-06** | Payment handoff and order result page | UI-05 | 📋 Pending |
@@ -69,7 +69,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 **Done when:** the app has a working storefront shell and page navigation; owner pages cannot be opened by guests or customer-role accounts; shared session-status and validation-error presentation is available for later forms.
 
-**Implemented:** Replaced the Laravel welcome page with a responsive storefront landing shell, added shared Blade layout and reusable form-field/status-badge components, flash/error presentation, a role-protected owner placeholder, and HTML 403 handling. Browser pages use the web session and CSRF middleware; API role failures remain JSON. Owner sign-in and forms remain in UI-11; catalog presentation and cart remain in UI-02 through UI-04.
+**Implemented:** Replaced the Laravel welcome page with a responsive storefront landing shell, added shared Blade layout and reusable form-field/status-badge components, flash/error presentation, a role-protected owner placeholder, and HTML 403 handling. Browser pages use the web session and CSRF middleware; API role failures remain JSON. Owner sign-in and forms remain in UI-11; cart interactions remain in UI-04.
 
 ### ✅ UI-01: Catalog data and storefront read path
 
@@ -91,16 +91,18 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 **Done when:** storefront pages share a consistent layout, keyboard focus is visible, and the core shell works without horizontal overflow at mobile widths.
 
-**Implemented:** Added reusable alert, empty-state, loading-state, price, and product-card components; standardized shared layout colors and container tokens; added product-card stock/image/price styling and tablet/mobile layouts; and updated reduced-motion behavior to include animation.
+**Implemented:** Added reusable alert, empty-state, loading-state, price, and product-card components. The storefront visual direction follows the supplied reference: compact white navigation, blue/cyan hero, light neutral background, small service cards, filter chips, and simple product cards. Avoid invented ratings, discounts, shipping claims, or unsupported categories. Responsive tablet/mobile layouts and reduced-motion behavior are included.
 
-### UI-03: Product listing, detail, and stock states
+### ✅ UI-03: Product listing, detail, and stock states
 
 - Create a catalog page with product cards, price, variant selection or variant summary, and clear stock/availability state.
-- Create a product detail page with description, available variants, price, and quantity control.
+- Create a product detail page with description, available variants, price, and stock state.
 - Add empty catalog and not-found states. Do not show inactive variants as purchasable.
 - Add search/category/filter controls only when backed by available catalog fields; defer fields that do not exist.
 
-**Done when:** a customer can find a seeded product, select an available variant, see its price and stock state, and add it to the cart.
+**Done when:** a customer can find a seeded product, open its detail page, and see variant price and stock state. Cart and quantity selection are handled in UI-04.
+
+**Implemented:** Added server-rendered product listing and detail routes using active catalog records. Product name/description search and stock-availability filters use existing fields. Product cards show price and stock state without ratings or promotional claims; missing images use a neutral placeholder. Category filters are omitted because the current catalog has no category data.
 
 ### UI-04: Shopping cart
 

@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Storefront\StorefrontController;
 
 /*
 |--------------------------------------------------------------------------
@@ -13,7 +14,8 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::view('/', 'storefront.home')->name('storefront.home');
+Route::get('/', [StorefrontController::class, 'index'])->name('storefront.home');
+Route::get('/products/{slug}', [StorefrontController::class, 'show'])->name('storefront.products.show');
 
 Route::view('/owner', 'owner.index')
     ->middleware('role:store_owner')

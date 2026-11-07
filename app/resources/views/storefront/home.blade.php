@@ -1,47 +1,86 @@
 @extends('layouts.app')
 
-@section('title', 'Good things for everyday')
+@section('title', 'Belanja kebutuhan sehari-hari')
 
 @section('content')
-    <section class="hero" aria-labelledby="hero-title">
+    <section class="home-hero" aria-labelledby="hero-title">
         <div class="hero-copy">
-            <p class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span> A little more considered</p>
-            <h1 id="hero-title">Good things<br>for <em>everyday.</em></h1>
-            <p class="hero-description">A thoughtful collection for the rituals, rooms, and little moments that make a day feel like yours.</p>
-            <a class="button button-dark" href="#collection">Explore the collection
-                <svg aria-hidden="true" viewBox="0 0 20 20" fill="none"><path d="M3.5 10h13m-5-5 5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </a>
-            <div class="hero-note"><span class="note-line" aria-hidden="true"></span><span>Small details. Made to matter.</span></div>
+            <p class="hero-kicker">PILIHAN UNTUK HARI-HARI</p>
+            <h1 id="hero-title">Belanja kebutuhan<br>jadi lebih mudah.</h1>
+            <p>Temukan produk untuk kebutuhan sehari-hari di AntaMart.</p>
+            <a class="button button-white" href="#products">Belanja sekarang <span aria-hidden="true">›</span></a>
         </div>
-        <div class="hero-art" role="img" aria-label="Abstract still life in warm, natural colors">
-            <div class="art-sun"></div><div class="art-arch art-arch-back"></div><div class="art-arch art-arch-front"></div>
-            <div class="art-vase"><div class="vase-neck"></div><div class="vase-body"></div></div>
-            <div class="art-stem stem-one"><i></i><i></i><i></i></div><div class="art-stem stem-two"><i></i><i></i></div>
-            <div class="art-table"></div><span class="art-caption">OBJECTS FOR SLOWER DAYS <span>— 01</span></span>
+    </section>
+
+    <section class="service-strip" aria-label="Informasi layanan AntaMart">
+        <article class="service-card">
+            <span class="service-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M12 3 19 6v5c0 4.4-2.8 7.8-7 10-4.2-2.2-7-5.6-7-10V6l7-3Z" stroke="currentColor" stroke-width="1.5"/><path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <span><strong>Checkout sebagai tamu</strong><small>Belanja tanpa membuat akun</small></span>
+        </article>
+        <article class="service-card">
+            <span class="service-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 10h8M8 14h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </span>
+            <span><strong>Pembayaran via Xendit</strong><small>Status pembayaran diperbarui</small></span>
+        </article>
+        <article class="service-card">
+            <span class="service-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.5"/><path d="m16 16 4 4M8 11h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </span>
+            <span><strong>Lacak pesanan</strong><small>Gunakan ID pesanan dan email</small></span>
+        </article>
+        <article class="service-card">
+            <span class="service-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16v13H4zM8 7V4h8v3M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <span><strong>Stok diperiksa saat checkout</strong><small>Ketersediaan dikonfirmasi kembali</small></span>
+        </article>
+    </section>
+
+    <section class="catalog-section" id="products" aria-labelledby="catalog-title">
+        <div class="section-heading">
+            <div><p class="section-eyebrow">ANTAMART</p><h2 id="catalog-title">Produk</h2></div>
+            <span class="result-count">{{ $products->total() }} produk</span>
         </div>
-        <div class="hero-index" aria-hidden="true"><span>01</span><i></i><span>03</span></div>
-    </section>
-    <section class="intro-strip" aria-label="Our approach">
-        <p>Made for the everyday, <span>kept for a little longer.</span></p><span class="intro-symbol" aria-hidden="true">✳</span>
-        <p>Useful things, <span>with a point of view.</span></p>
-    </section>
-    <section class="collection-section" id="collection" aria-labelledby="collection-title">
-        <div class="section-heading"><div><p class="eyebrow">A considered edit</p><h2 id="collection-title">The collection</h2></div><span class="section-count">01 — 04</span></div>
-        <x-empty-state
-            class="collection-empty"
-            title="Something good is taking shape."
-            description="We’re putting the finishing touches on our first collection. Come back soon to find your new everyday favorite."
-        >
-            <x-slot:footer>
-                <span class="empty-label"><span class="eyebrow-dot" aria-hidden="true"></span> First collection, coming soon</span>
-            </x-slot:footer>
-        </x-empty-state>
-    </section>
-    <section class="story-section" id="our-story" aria-labelledby="story-title">
-        <div class="story-number" aria-hidden="true">A.</div>
-        <div class="story-copy"><p class="eyebrow">A note from us</p><h2 id="story-title">Less, but<br><em>more meaningful.</em></h2>
-            <p>We believe the things we live with should earn their place. AntaMart is being built around useful objects, considered choices, and the small joy of finding just the right thing.</p>
-        </div>
-        <div class="story-aside"><span>THOUGHTFULLY<br>GATHERED</span><i aria-hidden="true">✳</i><span>FOR REAL LIFE</span></div>
+
+        <nav class="filter-chips" aria-label="Filter ketersediaan produk">
+            @foreach (['all' => 'Semua', 'in-stock' => 'Tersedia', 'sold-out' => 'Habis'] as $filter => $label)
+                <a class="filter-chip {{ $availability === $filter ? 'is-active' : '' }}"
+                   href="{{ route('storefront.home', array_filter(['q' => $search, 'availability' => $filter === 'all' ? null : $filter])) }}"
+                   @if ($availability === $filter) aria-current="page" @endif>{{ $label }}</a>
+            @endforeach
+        </nav>
+
+        @if ($products->count())
+            <div class="product-grid">
+                @foreach ($products as $product)
+                    <x-product-card :product="$product" :href="route('storefront.products.show', $product['slug'])" />
+                @endforeach
+            </div>
+
+            @if ($products->hasPages())
+                <nav class="pagination" aria-label="Navigasi halaman produk">
+                    @if ($products->onFirstPage())
+                        <span class="pagination-disabled">Sebelumnya</span>
+                    @else
+                        <a href="{{ $products->previousPageUrl() }}">Sebelumnya</a>
+                    @endif
+                    <span>Halaman {{ $products->currentPage() }} dari {{ $products->lastPage() }}</span>
+                    @if ($products->hasMorePages())
+                        <a href="{{ $products->nextPageUrl() }}">Berikutnya</a>
+                    @else
+                        <span class="pagination-disabled">Berikutnya</span>
+                    @endif
+                </nav>
+            @endif
+        @else
+            <x-empty-state
+                class="catalog-empty"
+                :title="$search ? 'Produk tidak ditemukan' : 'Belum ada produk untuk ditampilkan'"
+                :description="$search ? 'Coba kata pencarian lain.' : 'Silakan kembali lagi nanti.'"
+            />
+        @endif
     </section>
 @endsection
