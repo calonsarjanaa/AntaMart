@@ -3,6 +3,7 @@
 namespace App\Exceptions;
 
 use Exception;
+use Illuminate\Http\JsonResponse;
 
 class DuplicateCheckoutException extends Exception
 {
@@ -12,5 +13,11 @@ class DuplicateCheckoutException extends Exception
     ) {
         parent::__construct($message, 409);
     }
-}
 
+    public function render($request): JsonResponse
+    {
+        return response()->json([
+            'message' => $this->getMessage(),
+        ], 409);
+    }
+}

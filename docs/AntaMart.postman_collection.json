@@ -1,0 +1,83 @@
+{
+  "info": {
+    "name": "AntaMart Transaction & Fulfillment API",
+    "description": "Local API requests. Set the variables before sending. Owner routes need a Sanctum store-owner token. A valid order, cancellation request, variant, and item must exist for state-changing requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key": "baseUrl", "value": "http://localhost:8000/api"},
+    {"key": "orderId", "value": "01HXYZ1234567890ABCDEFGHJK"},
+    {"key": "cancellationRequestId", "value": "1"},
+    {"key": "guestEmail", "value": "shopper@example.com"},
+    {"key": "variantId", "value": "12"},
+    {"key": "orderItemId", "value": "1"},
+    {"key": "storeOwnerToken", "value": "replace-with-sanctum-token"},
+    {"key": "webhookToken", "value": "replace-with-xendit-callback-token"}
+  ],
+  "item": [
+    {
+      "name": "Storefront",
+      "item": [
+        {
+          "name": "Checkout (guest)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Accept", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"idempotency_key\": \"checkout-local-001\",\n  \"guest_email\": \"{{guestEmail}}\",\n  \"guest_phone\": \"+628123456789\",\n  \"items\": [{\"product_variant_id\": {{variantId}}, \"quantity\": 1}],\n  \"shipping_address\": {\"recipient_name\": \"Rina Putri\", \"phone\": \"+628123456789\", \"address_line1\": \"Jl. Mawar 10\", \"city\": \"Bandung\", \"province\": \"Jawa Barat\", \"postal_code\": \"40111\", \"country\": \"ID\"},\n  \"shipping_method\": \"regular\"\n}"},
+            "url": "{{baseUrl}}/checkout"
+          }
+        },
+        {
+          "name": "Retry payment session (guest)",
+          "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Accept", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"guest_email\": \"{{guestEmail}}\"}"}, "url": "{{baseUrl}}/orders/{{orderId}}/payment-session"}
+        },
+        {
+          "name": "Track guest order",
+          "request": {"method": "GET", "header": [{"key": "Accept", "value": "application/json"}], "url": "{{baseUrl}}/track?order_id={{orderId}}&email={{guestEmail}}"}
+        },
+        {
+          "name": "Request cancellation",
+          "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Accept", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"reason\": \"Ordered by mistake\", \"guest_email\": \"{{guestEmail}}\"}"}, "url": "{{baseUrl}}/orders/{{orderId}}/cancellation-requests"}
+        },
+        {
+          "name": "Withdraw cancellation request",
+          "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Accept", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"guest_email\": \"{{guestEmail}}\"}"}, "url": "{{baseUrl}}/orders/{{orderId}}/cancellation-requests/{{cancellationRequestId}}/withdraw"}
+        }
+      ]
+    },
+    {
+      "name": "Store owner",
+      "item": [
+        {
+          "name": "Review cancellation (approve)",
+          "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Accept", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{storeOwnerToken}}"}], "body": {"mode": "raw", "raw": "{\"decision\": \"approve\"}"}, "url": "{{baseUrl}}/admin/orders/{{orderId}}/cancellation-requests/{{cancellationRequestId}}/review"}
+        },
+        {
+          "name": "Cancel processing order",
+          "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Accept", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{storeOwnerToken}}"}], "body": {"mode": "raw", "raw": "{\"reason\": \"Customer service resolution\"}"}, "url": "{{baseUrl}}/admin/orders/{{orderId}}/cancel"}
+        },
+        {
+          "name": "Mark refund completed",
+          "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Accept", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{storeOwnerToken}}"}], "body": {"mode": "raw", "raw": "{\"notes\": \"Refund sent externally\", \"resellable_item_ids\": [{{orderItemId}}]}"}, "url": "{{baseUrl}}/admin/orders/{{orderId}}/refund/mark-refunded"}
+        },
+        {
+          "name": "Add manual shipment",
+          "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Accept", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{storeOwnerToken}}"}], "body": {"mode": "raw", "raw": "{\"tracking_number\": \"TRACK123\", \"tracking_url\": \"https://tracking.example.test/TRACK123\"}"}, "url": "{{baseUrl}}/admin/orders/{{orderId}}/shipment"}
+        },
+        {
+          "name": "Confirm delivery",
+          "request": {"method": "POST", "header": [{"key": "Accept", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{storeOwnerToken}}"}], "url": "{{baseUrl}}/admin/orders/{{orderId}}/shipment/confirm-delivery"}
+        }
+      ]
+    },
+    {
+      "name": "Webhook",
+      "item": [
+        {
+          "name": "Xendit callback (sample only)",
+          "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "x-callback-token", "value": "{{webhookToken}}"}], "body": {"mode": "raw", "raw": "{\n  \"id\": \"replace-with-real-xendit-payment-id\",\n  \"external_id\": \"{{orderId}}\",\n  \"status\": \"PAID\",\n  \"amount\": 135000\n}"}, "url": "{{baseUrl}}/webhooks/xendit"}
+        }
+      ]
+    }
+  ]
+}

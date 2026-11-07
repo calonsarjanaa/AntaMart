@@ -4,6 +4,7 @@ namespace App\Exceptions;
 
 use App\Enums\OrderStatus;
 use Exception;
+use Illuminate\Http\JsonResponse;
 
 class InvalidOrderStateException extends Exception
 {
@@ -15,5 +16,11 @@ class InvalidOrderStateException extends Exception
         $msg = $message ?: "Cannot transition order from state '{$fromState->value}' to '{$toState->value}'.";
         parent::__construct($msg, 422);
     }
-}
 
+    public function render($request): JsonResponse
+    {
+        return response()->json([
+            'message' => $this->getMessage(),
+        ], 422);
+    }
+}

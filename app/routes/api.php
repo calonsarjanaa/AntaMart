@@ -1,5 +1,13 @@
 <?php
 
+use App\Http\Controllers\Admin\CancellationController as AdminCancellationController;
+use App\Http\Controllers\Admin\RefundController;
+use App\Http\Controllers\Admin\ShipmentController;
+use App\Http\Controllers\Storefront\CancellationRequestController;
+use App\Http\Controllers\Storefront\CheckoutController;
+use App\Http\Controllers\Storefront\GuestOrderTrackingController;
+use App\Http\Controllers\Storefront\RetryPaymentSessionController;
+use App\Http\Controllers\Webhook\XenditController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -7,13 +15,33 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
-|
 */
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+// Storefront Checkout (Guest & Auth)
+Route::post('/checkout', CheckoutController::class);
+
+// Retry / Re-create payment session
+Route::post('/orders/{id}/payment-session', RetryPaymentSessionController::class);
+
+// Guest order tracking
+Route::get('/track', GuestOrderTrackingController::class)->middleware('throttle:10,1');
+
+// Customer and guest order cancellation
+Route::post('/orders/{id}/cancellation-requests', [CancellationRequestController::class, 'store']);
+Route::post('/orders/{id}/cancellation-requests/{requestId}/withdraw', [CancellationRequestController::class, 'withdraw']);
+
+// Store Owner cancellation review and immediate cancellation
+Route::middleware(['auth:sanctum', 'role:store_owner'])->prefix('admin')->group(function () {
+    Route::post('/orders/{id}/cancellation-requests/{requestId}/review', [AdminCancellationController::class, 'review']);
+    Route::post('/orders/{id}/cancel', [AdminCancellationController::class, 'cancel']);
+    Route::post('/orders/{id}/refund/mark-refunded', [RefundController::class, 'markRefunded']);
+    Route::post('/orders/{id}/shipment', [ShipmentController::class, 'store']);
+    Route::post('/orders/{id}/shipment/confirm-delivery', [ShipmentController::class, 'confirmDelivery']);
+});
+
+// Xendit Webhook Callback
+Route::post('/webhooks/xendit', XenditController::class)->middleware('xendit.verify');
