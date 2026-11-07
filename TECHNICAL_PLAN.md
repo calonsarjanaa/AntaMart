@@ -17,7 +17,7 @@ This roadmap was established in **Phase 2 (Technical Planning)** and is tracked 
 | **T-07** | Payment Expiry (`ExpireUnpaidOrder` job + reservation release) | FR-PAY-002, FR-INV-006 | ✅ Implemented; verification pending | — |
 | **T-08** | Cancellation Flow (`CancellationService` + Storefront & Admin Endpoints) | FR-CAN-001 to 005 | ✅ Implemented; verification pending | — |
 | **T-09** | Manual Refund Tracking (`RefundService` + Admin Mark-Refunded Endpoint) | FR-REF-001 to 005, FR-INV-007 | ✅ Implemented; verification pending | — |
-| **T-10** | Shipment Management (`ShipmentService` + Admin Tracking Endpoints) | FR-SHP-001, 003, 005 | 📋 Pending | — |
+| **T-10** | Shipment Management (`ShipmentService` + Admin Tracking Endpoints) | FR-SHP-001, 003, 005 | ✅ Implemented; verification pending | — |
 | **T-11** | Guest Order Tracking Endpoint + Rate Limiting | FR-HIS-001, FR-TRX-011 | 📋 Pending | — |
 | **T-12** | Audit Trail (Events, `RecordAuditLog` Listener, `AuditService`) | TRX-012 | 📋 Pending | — |
 | **T-13** | Comprehensive Integration & Feature Test Suite | All Requirements | 📋 Pending | — |
@@ -110,11 +110,12 @@ This roadmap was established in **Phase 2 (Technical Planning)** and is tracked 
 - Restock is limited to item quantities with a corresponding converted reservation, so late payments on expired orders do not add stock that was never deducted.
 - A refund can only be marked as `refunded` once; the status transition and any stock changes share a database transaction.
 
-### 📋 T-10: Shipment Management
-- Store Owner shipment creation: `POST /api/admin/orders/{id}/shipment`:
-  - Sets manual tracking number.
-  - Transitions order to `shipped`.
-- Store Owner delivery confirmation: transitions order to `completed`.
+### ✅ T-10: Shipment Management (Verification Pending)
+- Store Owner manual shipment creation: `POST /api/admin/orders/{id}/shipment`:
+  - Requires a tracking number and accepts an optional tracking URL.
+  - Transitions a `processing` order to `shipped` and records `shipped_at`.
+- Store Owner delivery confirmation: `POST /api/admin/orders/{id}/shipment/confirm-delivery` records `delivered_at` and transitions the order to `completed`.
+- Courier integration remains outside this task; the current shipment endpoint creates manual shipments.
 
 ### 📋 T-11: Guest Order Tracking
 - Public endpoint: `GET /api/track?order_id=...&email=...`
