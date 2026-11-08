@@ -12,19 +12,26 @@
         <form class="checkout-layout" method="post" action="{{ route('storefront.checkout.store') }}">
             @csrf
             <div class="checkout-form-panel">
-                <section class="checkout-form-section" aria-labelledby="contact-title">
-                    <h2 id="contact-title">Kontak pembeli</h2>
-                    <p class="checkout-section-copy">Informasi ini digunakan untuk konfirmasi pesanan.</p>
-                    <div class="checkout-fields">
-                        <x-form-field name="guest_email" label="Email" type="email" autocomplete="email" required />
-                        <x-form-field name="guest_phone" label="Nomor telepon" type="tel" autocomplete="tel" required />
-                    </div>
-                </section>
+                @if (!$customer)
+                    <section class="checkout-form-section" aria-labelledby="contact-title">
+                        <h2 id="contact-title">Kontak pembeli</h2>
+                        <p class="checkout-section-copy">Informasi ini digunakan untuk konfirmasi pesanan.</p>
+                        <div class="checkout-fields">
+                            <x-form-field name="guest_email" label="Email" type="email" autocomplete="email" required />
+                            <x-form-field name="guest_phone" label="Nomor telepon" type="tel" autocomplete="tel" required />
+                        </div>
+                    </section>
+                @else
+                    <section class="checkout-form-section" aria-labelledby="contact-title">
+                        <h2 id="contact-title">Kontak akun</h2>
+                        <p class="checkout-section-copy">Konfirmasi pesanan akan menggunakan {{ $customer->email }}.</p>
+                    </section>
+                @endif
 
                 <section class="checkout-form-section" aria-labelledby="address-title">
                     <h2 id="address-title">Alamat pengiriman</h2>
                     <div class="checkout-fields">
-                        <x-form-field name="shipping_address[recipient_name]" label="Nama penerima" autocomplete="name" required />
+                        <x-form-field name="shipping_address[recipient_name]" label="Nama penerima" :value="$customer?->name" autocomplete="name" required />
                         <x-form-field name="shipping_address[phone]" label="Nomor telepon penerima" type="tel" autocomplete="shipping tel" required />
                         <x-form-field name="shipping_address[address_line1]" label="Alamat" autocomplete="shipping street-address" required />
                         <x-form-field name="shipping_address[address_line2]" label="Detail alamat (opsional)" autocomplete="shipping address-line2" />

@@ -36,7 +36,7 @@ button, input, textarea, select { font: inherit; }
 .header-search svg { width: 15px; height: 15px; flex: 0 0 15px; }
 .header-search input { width: 100%; min-width: 0; border: 0; outline: 0; color: var(--ink); background: transparent; font-size: 11px; }
 .header-search input::placeholder { color: #98a2b3; }
-.header-actions { display: flex; align-items: center; justify-content: flex-end; }
+.header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
 .bag-link { display: inline-flex; min-width: 40px; align-items: center; justify-content: center; gap: 5px; color: #344054; font-size: 11px; }
 .bag-link svg { width: 17px; height: 17px; }
 .bag-count { color: var(--blue); font-size: 10px; }
@@ -280,6 +280,28 @@ button, input, textarea, select { font: inherit; }
 .button-secondary { color: #344054; border: 1px solid #d0d5dd; background: #fff; }
 .button-secondary:hover { color: var(--blue); border-color: #9dbcf8; background: #f8fbff; }
 .cancellation-reason-input { min-height: 100px; padding: 10px; resize: vertical; }
+.auth-nav-link { padding: 0; border: 0; color: #475467; background: transparent; font-size: 10px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.auth-nav-link:hover { color: var(--blue); }
+.header-logout-form { display: inline-flex; }
+.auth-page, .account-page { min-height: 55vh; margin: 25px auto 48px; }
+.auth-card { width: min(100%, 430px); margin: 20px auto; padding: 25px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; }
+.auth-card h1, .account-page > .section-heading h1 { margin: 0; color: #273244; font-size: 22px; font-weight: 750; letter-spacing: -.03em; }
+.auth-intro { margin: 8px 0 18px; color: #667085; font-size: 11px; line-height: 1.6; }
+.auth-form { display: grid; gap: 13px; }
+.auth-form > .button { width: 100%; min-height: 39px; margin-top: 3px; border-radius: 5px; }
+.auth-field-hint { color: #7b8494; font-size: 9px; }
+.auth-switch { margin: 17px 0 0; color: #667085; font-size: 10px; text-align: center; }
+.auth-switch a, .auth-guest-link { color: var(--blue); font-weight: 650; }
+.auth-guest-link { display: block; margin-top: 14px; font-size: 10px; text-align: center; }
+.account-card { display: flex; align-items: center; gap: 15px; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; }
+.account-avatar { display: grid; width: 45px; height: 45px; flex: 0 0 45px; place-items: center; border-radius: 50%; color: var(--blue); background: #eef4ff; font-size: 17px; font-weight: 750; }
+.account-details { min-width: 0; }
+.account-details h2 { margin: 0 0 4px; color: #344054; font-size: 13px; }
+.account-details p { margin: 0 0 5px; color: #667085; font-size: 10px; overflow-wrap: anywhere; }
+.account-details small { color: #98a2b3; font-size: 9px; }
+.account-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.account-actions .button { min-height: 35px; border-radius: 5px; }
+.account-actions form { display: inline-flex; }
 .add-to-cart-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 11px; margin-top: 17px; }
 .quantity-field { display: flex; flex-direction: column; gap: 5px; color: #475467; font-size: 10px; font-weight: 600; }
 .quantity-field input { width: 76px; height: 36px; padding: 0 8px; border: 1px solid #d0d5dd; border-radius: 5px; color: var(--ink); font-size: 11px; }
@@ -354,8 +376,11 @@ button, input, textarea, select { font: inherit; }
     .checkout-result-panel { margin: 24px auto; padding: 19px; }
     .order-result-layout { grid-template-columns: 1fr; }
     .tracking-nav-link { display: none; }
+    .auth-register-link, .header-logout-form { display: none; }
     .tracking-layout { grid-template-columns: 1fr; }
     .tracking-form-panel { position: static; }
+    .account-card { flex-wrap: wrap; }
+    .account-actions { width: 100%; margin-left: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Storefront\CartController;
 use App\Http\Controllers\Storefront\BrowserCheckoutController;
 use App\Http\Controllers\Storefront\BrowserGuestOrderTrackingController;
 use App\Http\Controllers\Storefront\BrowserGuestCancellationController;
+use App\Http\Controllers\Storefront\CustomerAuthController;
 
 /*
 |--------------------------------------------------------------------------
@@ -37,6 +38,18 @@ Route::post('/orders/{id}/cancellation-requests', [BrowserGuestCancellationContr
 Route::post('/orders/{id}/cancellation-requests/{requestId}/withdraw', [BrowserGuestCancellationController::class, 'withdraw'])
     ->middleware(['signed', 'throttle:10,1'])
     ->name('storefront.orders.cancellation.withdraw');
+
+Route::middleware('guest:web')->group(function () {
+    Route::get('/login', [CustomerAuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [CustomerAuthController::class, 'login'])->middleware('throttle:customer-login')->name('storefront.auth.login');
+    Route::get('/register', [CustomerAuthController::class, 'showRegistration'])->name('register');
+    Route::post('/register', [CustomerAuthController::class, 'register'])->middleware('throttle:customer-register')->name('storefront.auth.register');
+});
+
+Route::middleware(['auth:web', 'role:customer'])->prefix('/account')->name('storefront.account.')->group(function () {
+    Route::get('/', [CustomerAuthController::class, 'account'])->name('index');
+    Route::post('/logout', [CustomerAuthController::class, 'logout'])->name('logout');
+});
 
 Route::view('/owner', 'owner.index')
     ->middleware('role:store_owner')

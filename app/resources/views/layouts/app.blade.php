@@ -24,6 +24,18 @@
             </form>
             <div class="header-actions">
                 <a class="tracking-nav-link" href="{{ route('storefront.orders.track') }}">Lacak pesanan</a>
+                @if (auth('web')->user()?->isCustomer())
+                    <a class="auth-nav-link account-nav-link" href="{{ route('storefront.account.index') }}">Akun</a>
+                    <form class="header-logout-form" method="post" action="{{ route('storefront.account.logout') }}">
+                        @csrf
+                        <button class="auth-nav-link" type="submit">Keluar</button>
+                    </form>
+                @elseif (auth('web')->user()?->isStoreOwner())
+                    <a class="auth-nav-link" href="{{ route('owner.dashboard') }}">Console</a>
+                @else
+                    <a class="auth-nav-link" href="{{ route('login') }}">Masuk</a>
+                    <a class="auth-nav-link auth-register-link" href="{{ route('register') }}">Daftar</a>
+                @endif
                 <a class="bag-link" href="{{ route('storefront.cart.index') }}" aria-label="Keranjang, {{ array_sum(session('cart', [])) }} item">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
                         <path d="M5 8.5h14l1 12H4l1-12Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>

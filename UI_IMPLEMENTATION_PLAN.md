@@ -47,7 +47,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 | **UI-06** | Payment handoff and order result page | UI-05 | ✅ Implemented |
 | **UI-07** | Guest order tracking | UI-00, UI-02 | ✅ Implemented |
 | **UI-08** | Guest cancellation request and withdrawal | UI-07 | ✅ Implemented |
-| **UI-09** | Customer authentication and account foundation | UI-00 | 📋 Pending |
+| **UI-09** | Customer authentication and account foundation | UI-00 | ✅ Implemented |
 | **UI-10** | Customer order history and order details | UI-09, UI-06 | 📋 Pending |
 | **UI-11** | Store-owner authentication and console shell | UI-00 | 📋 Pending |
 | **UI-12** | Owner order list, filters, and order detail | UI-11 | 📋 Pending |
@@ -118,7 +118,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 ### ✅ UI-05: Guest and customer checkout
 
 - Collect guest email/phone and required recipient/address fields. No shipping-method control is shown because the current backend calculates shipping without accepting or persisting a method.
-- Keep guest checkout available; customer accounts are deferred to UI-09.
+- Keep guest checkout available alongside authenticated customer checkout.
 - Submit the session cart's variant IDs and quantities with a server-generated idempotency key; the browser cannot override cart prices or quantities.
 - Display field-level validation errors and stock conflicts while preserving safe form input.
 - Show the current database-priced subtotal and explain that the backend calculates shipping and the final total from the submitted address.
@@ -126,7 +126,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 **Done when:** valid guest checkout creates one order despite repeated submission; invalid address, unavailable stock, and gateway failure are explained without losing the user's next step.
 
-**Implemented:** Added a responsive guest checkout form, session-cart handoff, server-side idempotency, authoritative catalog/stock repricing, and Xendit payment redirection. A stock race returns the shopper to the cart with an actionable message. If Xendit cannot create a session, the order and reservation are retained and the shopper can retry payment on the same order. Shipping is calculated by the existing backend; selectable methods and pre-submit shipping quotes are not supported by the current contract.
+**Implemented:** Added a responsive guest checkout form, session-cart handoff, server-side idempotency, authoritative catalog/stock repricing, and Xendit payment redirection. Authenticated customers use their account email and do not need guest contact fields. A stock race returns the shopper to the cart with an actionable message. If Xendit cannot create a session, the order and reservation are retained and the shopper can retry payment on the same order. Shipping is calculated by the existing backend; selectable methods and pre-submit shipping quotes are not supported by the current contract.
 
 ### ✅ UI-06: Payment handoff and order result page
 
@@ -159,13 +159,15 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 **Implemented:** Added a cancellation section to verified guest tracking results. Processing orders can submit a reason and the exact checkout email; a pending request displays its status and can be withdrawn with the same email. All changes call the existing `CancellationService`, so eligibility, duplicate-pending prevention, first-decision behavior, and audit events remain enforced server-side. Actions require a three-day signed link, a tracked-order session, CSRF protection, and guest-email matching. Paid-order cancellation messaging explains that refunds are manual.
 
-### UI-09: Customer authentication and account foundation
+### ✅ UI-09: Customer authentication and account foundation
 
-- Add customer registration/login/logout and password reset only if the project chooses to support account creation in this release.
+- Add customer registration, login, and logout. Password reset can be deferred until email delivery is configured and selected for this release.
 - Keep customer and store-owner roles distinct; customer signup must never grant owner access.
 - Support secure session handling, CSRF protection, validation, and useful failure states.
 
-**Done when:** a customer can authenticate, end a session, and cannot access owner routes. If account creation is deferred, explicitly mark authenticated customer UI as deferred and keep guest purchase/tracking fully functional.
+**Done when:** a customer can register, authenticate, end a session, and cannot access owner routes. Guest purchase and tracking remain available.
+
+**Implemented:** Added throttled customer registration/login/logout and a customer-only account page. Registration forces the `customer` role server-side; customer login rejects owner accounts, session IDs are regenerated on authentication, and logout invalidates the session and CSRF token. Authenticated customers can check out using their account email while guest checkout remains available. Password reset is deferred until an email delivery workflow is selected and configured.
 
 ### UI-10: Customer order history and order details
 
@@ -243,5 +245,5 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 3. **Accounts and operations:** UI-09 through UI-16 (customer history and store-owner console).
 4. **Release readiness:** UI-17 (end-to-end and accessibility review).
 
-The recommended next implementation task is **UI-09**, to add customer authentication while keeping guest checkout and tracking available.
+The recommended next implementation task is **UI-10**, to add customer order history and order details with customer ownership checks.
 
