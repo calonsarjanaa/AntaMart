@@ -5,6 +5,7 @@ use App\Http\Controllers\Storefront\StorefrontController;
 use App\Http\Controllers\Storefront\CartController;
 use App\Http\Controllers\Storefront\BrowserCheckoutController;
 use App\Http\Controllers\Storefront\BrowserGuestOrderTrackingController;
+use App\Http\Controllers\Storefront\BrowserGuestCancellationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -30,6 +31,12 @@ Route::get('/checkout/result/{orderId}', [BrowserCheckoutController::class, 'res
 Route::post('/checkout/result/{orderId}/retry', [BrowserCheckoutController::class, 'retryResultPayment'])->middleware('signed')->name('storefront.checkout.result.retry');
 Route::get('/orders/track', [BrowserGuestOrderTrackingController::class, 'index'])->name('storefront.orders.track');
 Route::post('/orders/track', [BrowserGuestOrderTrackingController::class, 'store'])->middleware('throttle:10,1')->name('storefront.orders.track.lookup');
+Route::post('/orders/{id}/cancellation-requests', [BrowserGuestCancellationController::class, 'store'])
+    ->middleware(['signed', 'throttle:10,1'])
+    ->name('storefront.orders.cancellation.store');
+Route::post('/orders/{id}/cancellation-requests/{requestId}/withdraw', [BrowserGuestCancellationController::class, 'withdraw'])
+    ->middleware(['signed', 'throttle:10,1'])
+    ->name('storefront.orders.cancellation.withdraw');
 
 Route::view('/owner', 'owner.index')
     ->middleware('role:store_owner')

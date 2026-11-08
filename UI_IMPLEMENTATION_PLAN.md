@@ -46,7 +46,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 | **UI-05** | Guest and customer checkout | UI-01, UI-04 | ✅ Implemented |
 | **UI-06** | Payment handoff and order result page | UI-05 | ✅ Implemented |
 | **UI-07** | Guest order tracking | UI-00, UI-02 | ✅ Implemented |
-| **UI-08** | Guest cancellation request and withdrawal | UI-07 | 📋 Pending |
+| **UI-08** | Guest cancellation request and withdrawal | UI-07 | ✅ Implemented |
 | **UI-09** | Customer authentication and account foundation | UI-00 | 📋 Pending |
 | **UI-10** | Customer order history and order details | UI-09, UI-06 | 📋 Pending |
 | **UI-11** | Store-owner authentication and console shell | UI-00 | 📋 Pending |
@@ -149,13 +149,15 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 **Implemented:** Added a guest lookup page reachable from the storefront header/footer, with an order ID and checkout email form. Web lookups share the existing tracking service and 10-per-minute IP limit. A matching order shows only order/payment status, item snapshots and totals, shipment/tracking information, and refund status; address and contact details remain hidden. Mismatched ID/email responses use the same generic message, and throttled requests receive a retry-later page.
 
-### UI-08: Guest cancellation request and withdrawal
+### ✅ UI-08: Guest cancellation request and withdrawal
 
 - From an eligible order view, submit a cancellation reason and exact guest email.
 - Show request status and allow withdrawal only while pending and undecided.
 - Communicate that approval/rejection is reviewed by the store and that paid-order refunds are handled manually.
 
 **Done when:** eligible guests can submit and withdraw a pending request; duplicate, ineligible, decided, and mismatched-email cases show server errors clearly.
+
+**Implemented:** Added a cancellation section to verified guest tracking results. Processing orders can submit a reason and the exact checkout email; a pending request displays its status and can be withdrawn with the same email. All changes call the existing `CancellationService`, so eligibility, duplicate-pending prevention, first-decision behavior, and audit events remain enforced server-side. Actions require a three-day signed link, a tracked-order session, CSRF protection, and guest-email matching. Paid-order cancellation messaging explains that refunds are manual.
 
 ### UI-09: Customer authentication and account foundation
 
@@ -241,5 +243,5 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 3. **Accounts and operations:** UI-09 through UI-16 (customer history and store-owner console).
 4. **Release readiness:** UI-17 (end-to-end and accessibility review).
 
-The recommended next implementation task is **UI-08**, to add guest cancellation request and withdrawal actions to eligible tracked orders.
+The recommended next implementation task is **UI-09**, to add customer authentication while keeping guest checkout and tracking available.
 

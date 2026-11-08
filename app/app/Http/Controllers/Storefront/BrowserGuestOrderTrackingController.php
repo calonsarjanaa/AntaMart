@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Storefront;
 
 use App\Http\Controllers\Controller;
+use App\Enums\CancellationStatus;
+use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Services\GuestOrderTrackingService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\URL;
 
 class BrowserGuestOrderTrackingController extends Controller
 {
@@ -20,11 +23,30 @@ class BrowserGuestOrderTrackingController extends Controller
             ? Order::query()
                 ->whereKey($orderId)
                 ->whereNull('customer_id')
-                ->with(['items', 'payment', 'shipment', 'refund'])
+                ->with(['items', 'payment', 'shipment', 'refund', 'latestCancellationRequest'])
                 ->first()
             : null;
 
-        return view('storefront.tracking.index', compact('order'));
+        $pendingCancellation = $order?->cancellationRequests()
+            ->where('status', CancellationStatus::Pending->value)
+            ->latest()
+            ->first();
+        $hasPendingCancellation = $pendingCancellation !== null;
+
+        return view('storefront.tracking.index', [
+            'order' => $order,
+            'pendingCancellation' => $pendingCancellation,
+            'latestCancellation' => $order?->latestCancellationRequest,
+            'cancellationStoreUrl' => $order?->status === OrderStatus::Processing && !$hasPendingCancellation
+                ? URL::temporarySignedRoute('storefront.orders.cancellation.store', now()->addDays(3), ['id' => $order->id])
+                : null,
+            'cancellationWithdrawUrl' => $pendingCancellation && $pendingCancellation->decided_at === null
+                ? URL::temporarySignedRoute('storefront.orders.cancellation.withdraw', now()->addDays(3), [
+                    'id' => $order->id,
+                    'requestId' => $pendingCancellation->id,
+                ])
+                : null,
+        ]);
     }
 
     public function store(Request $request, GuestOrderTrackingService $trackingService)

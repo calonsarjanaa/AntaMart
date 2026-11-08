@@ -101,6 +101,55 @@
                             <p>Informasi pengiriman belum tersedia.</p>
                         @endif
                     </section>
+
+                    @if ($pendingCancellation || $latestCancellation || $orderStatus === 'processing')
+                        <section class="checkout-form-section tracking-cancellation-panel" aria-labelledby="tracking-cancellation-title">
+                            <h2 id="tracking-cancellation-title">Permintaan pembatalan</h2>
+                            @if ($pendingCancellation)
+                                <div class="cancellation-request-summary">
+                                    <span>Status permintaan</span>
+                                    <x-status-badge :status="$pendingCancellation->status->value" />
+                                </div>
+                                <p>Permintaan ini menunggu tinjauan toko. Kamu dapat menariknya sebelum toko membuat keputusan.</p>
+                                @if ($cancellationWithdrawUrl)
+                                    <form class="cancellation-action-form" method="post" action="{{ $cancellationWithdrawUrl }}">
+                                        @csrf
+                                        <x-form-field name="guest_email" label="Email yang digunakan saat checkout" type="email" required autocomplete="email" />
+                                        <button class="button button-secondary" type="submit">Tarik permintaan</button>
+                                    </form>
+                                @endif
+                            @elseif ($orderStatus === 'processing')
+                                @if ($latestCancellation)
+                                    <div class="cancellation-request-summary">
+                                        <span>Permintaan sebelumnya</span>
+                                        <x-status-badge :status="$latestCancellation->status->value" />
+                                    </div>
+                                    @if ($latestCancellation->status->value === 'rejected' && $latestCancellation->rejection_reason)
+                                        <p>Catatan toko: {{ $latestCancellation->rejection_reason }}</p>
+                                    @endif
+                                @endif
+                                <p>Permintaan akan ditinjau oleh toko. Pesanan yang sudah dibayar dan dibatalkan memerlukan pengembalian dana manual.</p>
+                                @if ($cancellationStoreUrl)
+                                    <form class="cancellation-action-form" method="post" action="{{ $cancellationStoreUrl }}">
+                                        @csrf
+                                        <x-form-field name="guest_email" label="Email yang digunakan saat checkout" type="email" required autocomplete="email" />
+                                        <div class="form-field">
+                                            <label class="field-label" for="cancellation-reason">Alasan pembatalan <span class="required-mark" aria-hidden="true">*</span></label>
+                                            <textarea id="cancellation-reason" name="reason" class="field-input cancellation-reason-input @error('reason') field-input-invalid @enderror" maxlength="2000" required @error('reason') aria-invalid="true" aria-describedby="cancellation-reason-error" @enderror>{{ old('reason') }}</textarea>
+                                            @error('reason')<p class="field-error" id="cancellation-reason-error">{{ $message }}</p>@enderror
+                                        </div>
+                                        <button class="button button-primary" type="submit">Kirim permintaan pembatalan</button>
+                                    </form>
+                                @endif
+                            @else
+                                <div class="cancellation-request-summary">
+                                    <span>Permintaan terakhir</span>
+                                    <x-status-badge :status="$latestCancellation->status->value" />
+                                </div>
+                                <p>{{ $latestCancellation->reason }}</p>
+                            @endif
+                        </section>
+                    @endif
                 </div>
             @endif
         </div>
