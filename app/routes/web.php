@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\OwnerOrderController;
 use App\Http\Controllers\Admin\OwnerCancellationController;
 use App\Http\Controllers\Admin\OwnerRefundController;
 use App\Http\Controllers\Admin\OwnerShipmentController;
+use App\Http\Controllers\Admin\OwnerProductController;
 
 /*
 |--------------------------------------------------------------------------
@@ -68,6 +69,13 @@ Route::middleware('guest:web')->prefix('/owner')->name('owner.')->group(function
 
 Route::middleware(['auth:web', 'role:store_owner'])->prefix('/owner')->name('owner.')->group(function () {
     Route::view('/', 'owner.index')->name('dashboard');
+    Route::get('/products', [OwnerProductController::class, 'index'])->name('products.index');
+    Route::get('/products/create', [OwnerProductController::class, 'create'])->name('products.create');
+    Route::post('/products', [OwnerProductController::class, 'store'])->name('products.store');
+    Route::get('/products/{product}/edit', [OwnerProductController::class, 'edit'])->name('products.edit');
+    Route::put('/products/{product}', [OwnerProductController::class, 'update'])->name('products.update');
+    Route::post('/products/{product}/variants', [OwnerProductController::class, 'storeVariant'])->name('products.variants.store');
+    Route::put('/products/{product}/variants/{variant}', [OwnerProductController::class, 'updateVariant'])->name('products.variants.update');
     Route::get('/cancellations', [OwnerCancellationController::class, 'index'])->name('cancellations.index');
     Route::get('/orders', [OwnerOrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{orderId}', [OwnerOrderController::class, 'show'])->name('orders.show');

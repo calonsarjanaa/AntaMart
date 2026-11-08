@@ -20,6 +20,7 @@
                 <nav class="owner-nav" aria-label="Navigasi console">
                     <a @class(['is-active' => request()->routeIs('owner.dashboard')]) href="{{ route('owner.dashboard') }}">Dashboard</a>
                     <a @class(['is-active' => request()->routeIs('owner.orders.*')]) href="{{ route('owner.orders.index') }}">Pesanan</a>
+                    <a @class(['is-active' => request()->routeIs('owner.products.*')]) href="{{ route('owner.products.index') }}">Katalog</a>
                     <a @class(['is-active' => request()->routeIs('owner.cancellations.*')]) href="{{ route('owner.cancellations.index') }}">Pembatalan</a>
                 </nav>
                 <div class="owner-header-actions">

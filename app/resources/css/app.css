@@ -346,6 +346,22 @@ button, input, textarea, select { font: inherit; }
 .owner-empty-panel h2 { margin: 0 0 6px; color: #344054; font-size: 13px; }
 .owner-empty-panel p { margin: 0; color: #7b8494; font-size: 10px; }
 .owner-orders-table { min-width: 860px; }
+.owner-products-table { min-width: 620px; }
+.owner-product-status { display: inline-flex; padding: 4px 7px; border-radius: 4px; color: #795b08; background: #fff5d6; font-size: 9px; font-weight: 650; }
+.owner-product-status.is-active { color: #17663a; background: #e9f7ed; }
+.owner-product-management { display: grid; align-items: start; gap: 13px; }
+.owner-product-form { display: grid; gap: 13px; }
+.owner-product-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.owner-product-description { grid-column: 1 / -1; }
+.owner-product-form textarea.field-input { min-height: 110px; padding: 9px 10px; resize: vertical; }
+.owner-product-form input[type="file"].field-input { padding: 8px; }
+.owner-product-form .form-field > small, .owner-variant-form .form-field > small { color: #7b8494; font-size: 9px; line-height: 1.5; }
+.owner-product-form-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.owner-product-image-preview { display: block; width: min(180px, 100%); aspect-ratio: 1; object-fit: cover; border: 1px solid #e5e7eb; border-radius: 6px; }
+.owner-product-help { margin: 0 0 12px; color: #667085; font-size: 10px; line-height: 1.6; }
+.owner-variant-form { display: grid; gap: 12px; padding: 14px 0; border-top: 1px solid #eef0f3; }
+.owner-variant-form h3 { display: flex; align-items: baseline; gap: 8px; margin: 0; color: #344054; font-size: 11px; }
+.owner-variant-form h3 small { color: #7b8494; font-size: 9px; font-weight: 500; }
 .owner-orders-table td { vertical-align: middle; }
 .owner-orders-table td small, .owner-orders-table .owner-buyer-name { display: block; max-width: 230px; overflow: hidden; text-overflow: ellipsis; }
 .owner-orders-table td small { margin-top: 4px; color: #7b8494; font-size: 9px; }
@@ -530,6 +546,8 @@ button, input, textarea, select { font: inherit; }
     .owner-order-buyer { position: static; }
     .owner-state-grid { grid-template-columns: 1fr; }
     .owner-page-heading { align-items: flex-start; }
+    .owner-product-form-grid { grid-template-columns: 1fr; }
+    .owner-product-description { grid-column: auto; }
 }
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
