@@ -13,6 +13,7 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\URL;
 
 class PaymentService
 {
@@ -38,12 +39,20 @@ class PaymentService
         $phone = $order->address?->phone ?? $order->guest_phone;
 
         try {
+            $resultUrl = URL::temporarySignedRoute(
+                'storefront.checkout.result',
+                now()->addDays(3),
+                ['orderId' => $order->id]
+            );
+
             $invoice = $this->paymentGateway->createInvoice(
                 orderId: $order->id,
                 amount: (float) $order->total,
                 customerEmail: $email ?? 'customer@example.com',
                 metadata: [
                     'phone' => $phone,
+                    'success_redirect_url' => $resultUrl,
+                    'failure_redirect_url' => $resultUrl,
                 ]
             );
 

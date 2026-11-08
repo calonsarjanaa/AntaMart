@@ -11,6 +11,7 @@ use App\Services\PaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
@@ -126,6 +127,51 @@ class BrowserCheckoutController extends Controller
         return $this->continuePayment($order, $paymentService);
     }
 
+    public function result(string $orderId)
+    {
+        $order = Order::query()
+            ->whereKey($orderId)
+            ->with(['items', 'payment', 'shipment', 'refund', 'latestCancellationRequest'])
+            ->firstOrFail();
+
+        return view('storefront.checkout.result', [
+            'order' => $order,
+            'retryUrl' => URL::temporarySignedRoute(
+                'storefront.checkout.result.retry',
+                now()->addDays(3),
+                ['orderId' => $order->id]
+            ),
+        ]);
+    }
+
+    public function retryResultPayment(string $orderId, PaymentService $paymentService)
+    {
+        $order = Order::query()->whereKey($orderId)->with('payment')->firstOrFail();
+
+        if ($order->status->value !== 'pending_payment') {
+            return redirect()->back()->with('status', 'Status pesanan sudah berubah. Periksa informasi terbaru di halaman ini.');
+        }
+
+        if ($order->payment?->xendit_payment_url && $order->expires_at?->isFuture()) {
+            return redirect()->away($order->payment->xendit_payment_url);
+        }
+
+        if ($order->expires_at && $order->expires_at->isPast()) {
+            return redirect()->back()->withErrors([
+                'payment' => 'Batas waktu pembayaran telah lewat. Status pesanan sedang diperbarui; muat ulang halaman ini sebentar lagi.',
+            ]);
+        }
+
+        $paymentSession = $paymentService->createPaymentSession($order);
+        if (!$paymentSession) {
+            return redirect()->back()->withErrors([
+                'payment' => 'Tautan pembayaran belum tersedia. Coba lagi sebentar.',
+            ]);
+        }
+
+        return redirect()->away($paymentSession['payment_url']);
+    }
+
     private function pendingOrder(): ?Order
     {
         $orderId = session('checkout.order_id');
@@ -144,6 +190,16 @@ class BrowserCheckoutController extends Controller
     private function continuePayment(Order $order, PaymentService $paymentService)
     {
         $order->loadMissing(['address', 'payment']);
+        if ($order->status->value !== 'pending_payment') {
+            session()->forget(['cart', 'checkout.order_id', 'checkout.idempotency_key']);
+
+            return redirect()->to(URL::temporarySignedRoute(
+                'storefront.checkout.result',
+                now()->addDays(3),
+                ['orderId' => $order->id]
+            ));
+        }
+
         $paymentUrl = $order->payment?->xendit_payment_url;
 
         if (!$paymentUrl) {

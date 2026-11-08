@@ -25,6 +25,8 @@ Route::delete('/cart/items/{variantId}', [CartController::class, 'destroy'])->na
 Route::get('/checkout', [BrowserCheckoutController::class, 'create'])->name('storefront.checkout.create');
 Route::post('/checkout', [BrowserCheckoutController::class, 'store'])->name('storefront.checkout.store');
 Route::post('/checkout/payment/retry', [BrowserCheckoutController::class, 'retryPayment'])->name('storefront.checkout.payment.retry');
+Route::get('/checkout/result/{orderId}', [BrowserCheckoutController::class, 'result'])->middleware('signed')->name('storefront.checkout.result');
+Route::post('/checkout/result/{orderId}/retry', [BrowserCheckoutController::class, 'retryResultPayment'])->middleware('signed')->name('storefront.checkout.result.retry');
 
 Route::view('/owner', 'owner.index')
     ->middleware('role:store_owner')
