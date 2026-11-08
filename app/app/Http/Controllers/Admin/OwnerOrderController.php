@@ -59,9 +59,23 @@ class OwnerOrderController extends Controller
     public function show(string $orderId)
     {
         $order = Order::query()
-            ->with(['customer', 'items', 'address', 'payment', 'shipment', 'refund', 'latestCancellationRequest'])
+            ->with(['customer', 'items', 'address', 'payment', 'shipment', 'refund.refundedBy', 'latestCancellationRequest'])
             ->whereKey($orderId)
             ->firstOrFail();
+
+        $convertedQuantities = $order->reservations()
+            ->where('status', 'converted')
+            ->get(['product_variant_id', 'quantity'])
+            ->groupBy('product_variant_id')
+            ->map(fn ($reservations) => $reservations->sum('quantity'));
+        $orderItemQuantities = $order->items
+            ->groupBy('product_variant_id')
+            ->map(fn ($items) => $items->sum('quantity'));
+        $eligibleResellableItemIds = $order->items
+            ->filter(fn ($item) => (int) ($convertedQuantities->get($item->product_variant_id) ?? 0)
+                >= (int) ($orderItemQuantities->get($item->product_variant_id) ?? 0))
+            ->pluck('id')
+            ->all();
 
         $auditLogs = $order->auditLogs()
             ->with('actor')
@@ -71,6 +85,6 @@ class OwnerOrderController extends Controller
             ->reverse()
             ->values();
 
-        return view('owner.orders.show', compact('order', 'auditLogs'));
+        return view('owner.orders.show', compact('order', 'auditLogs', 'eligibleResellableItemIds'));
     }
 }

@@ -109,12 +109,54 @@
                                 <small>Jumlah: <x-price :amount="$order->refund->amount" /></small>
                                 @if ($order->refund->reason)<small>Alasan: {{ $order->refund->reason }}</small>@endif
                                 @if ($order->refund->refunded_at)<small>Dicatat {{ $order->refund->refunded_at->timezone(config('app.timezone'))->format('d M Y, H:i') }}</small>@endif
-                                <p>Pengembalian dana dicatat manual; transfer dana tidak dilakukan oleh sistem.</p>
+                                @if ($order->refund->status->value === 'refunded')
+                                    <small>Dicatat oleh {{ $order->refund->refundedBy?->name ?? 'pemilik toko' }}</small>
+                                    <p>Transfer dana dilakukan secara manual. Barang yang dipilih untuk stok ulang:</p>
+                                    @php($restockedItemIds = array_map('intval', $order->refund->resellable_item_ids ?? []))
+                                    @if (count($restockedItemIds))
+                                        <ul class="owner-refund-item-list">
+                                            @foreach ($order->items->whereIn('id', $restockedItemIds) as $refundedItem)
+                                                <li>{{ $refundedItem->product_snapshot['name'] ?? 'Produk' }} · {{ $refundedItem->variant_snapshot['name'] ?? 'Varian' }} ({{ $refundedItem->quantity }} unit)</li>
+                                            @endforeach
+                                        </ul>
+                                    @else
+                                        <small>Tidak ada barang yang dipilih untuk stok ulang.</small>
+                                    @endif
+                                    @if ($order->refund->notes)<small>Catatan: {{ $order->refund->notes }}</small>@endif
+                                @else
+                                    <p>Transfer dana harus dilakukan secara manual. Setelah transfer selesai, catat penyelesaiannya di bawah.</p>
+                                @endif
                             @else
                                 <span class="owner-muted">Tidak ada catatan pengembalian dana</span>
                             @endif
                         </div>
                     </div>
+                    @if ($order->refund?->status->value === 'manual_refund_pending')
+                        <div class="owner-refund-form">
+                            <h3>Catat pengembalian dana selesai</h3>
+                            <p>Pastikan transfer dana sudah dilakukan di luar sistem sebelum menyimpan catatan ini.</p>
+                            <form method="post" action="{{ route('owner.orders.refund.mark-refunded', $order->id) }}" onsubmit="return confirm('Konfirmasi bahwa transfer dana sudah dilakukan? Sistem hanya mencatat penyelesaian ini.');">
+                                @csrf
+                                <fieldset class="owner-restock-options">
+                                    <legend>Pilih barang yang layak dijual kembali</legend>
+                                    @if (count($eligibleResellableItemIds))
+                                        @foreach ($order->items->whereIn('id', $eligibleResellableItemIds) as $restockItem)
+                                            <label class="owner-restock-option">
+                                                <input type="checkbox" name="resellable_item_ids[]" value="{{ $restockItem->id }}" @checked(in_array($restockItem->id, old('resellable_item_ids', [])))>
+                                                <span>{{ $restockItem->product_snapshot['name'] ?? 'Produk' }} · {{ $restockItem->variant_snapshot['name'] ?? 'Varian' }} <small>{{ $restockItem->quantity }} unit</small></span>
+                                            </label>
+                                        @endforeach
+                                        <small>Stok hanya ditambahkan untuk barang yang dipilih.</small>
+                                    @else
+                                        <p class="owner-muted">Tidak ada barang yang memenuhi syarat stok ulang untuk pesanan ini.</p>
+                                    @endif
+                                </fieldset>
+                                <label class="field-label" for="refund-notes">Catatan transfer manual <span>(opsional)</span></label>
+                                <textarea id="refund-notes" name="notes" rows="3" maxlength="5000">{{ old('notes') }}</textarea>
+                                <button class="button" type="submit">Simpan catatan pengembalian dana</button>
+                            </form>
+                        </div>
+                    @endif
                     @if ($order->status->value === 'processing')
                         <div class="owner-cancel-order">
                             <h3>Batalkan pesanan sebagai pemilik</h3>

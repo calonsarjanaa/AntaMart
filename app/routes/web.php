@@ -11,6 +11,7 @@ use App\Http\Controllers\Storefront\CustomerOrderController;
 use App\Http\Controllers\Admin\OwnerAuthController;
 use App\Http\Controllers\Admin\OwnerOrderController;
 use App\Http\Controllers\Admin\OwnerCancellationController;
+use App\Http\Controllers\Admin\OwnerRefundController;
 
 /*
 |--------------------------------------------------------------------------
@@ -71,5 +72,6 @@ Route::middleware(['auth:web', 'role:store_owner'])->prefix('/owner')->name('own
     Route::get('/orders/{orderId}', [OwnerOrderController::class, 'show'])->name('orders.show');
     Route::post('/orders/{orderId}/cancellation-requests/{requestId}/review', [OwnerCancellationController::class, 'review'])->name('orders.cancellations.review');
     Route::post('/orders/{orderId}/cancel', [OwnerCancellationController::class, 'cancelOrder'])->name('orders.cancel');
+    Route::post('/orders/{orderId}/refund/mark-refunded', [OwnerRefundController::class, 'markRefunded'])->name('orders.refund.mark-refunded');
     Route::post('/logout', [OwnerAuthController::class, 'logout'])->name('logout');
 });
