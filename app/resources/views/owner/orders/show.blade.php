@@ -82,6 +82,22 @@
                                 <small>Alasan: {{ $order->latestCancellationRequest->reason }}</small>
                                 @if ($order->latestCancellationRequest->rejection_reason)<small>Catatan keputusan: {{ $order->latestCancellationRequest->rejection_reason }}</small>@endif
                                 <small>Diajukan {{ $order->latestCancellationRequest->created_at?->timezone(config('app.timezone'))->format('d M Y, H:i') }}</small>
+                                @if ($order->latestCancellationRequest->status->value === 'pending' && !$order->latestCancellationRequest->decided_at)
+                                    <div class="owner-cancellation-actions">
+                                        <form method="post" action="{{ route('owner.orders.cancellations.review', [$order->id, $order->latestCancellationRequest->id]) }}" onsubmit="return confirm('Setujui permintaan pembatalan ini? Pesanan akan dibatalkan.');">
+                                            @csrf
+                                            <input type="hidden" name="decision" value="approve">
+                                            <button class="button" type="submit">Setujui pembatalan</button>
+                                        </form>
+                                        <form method="post" action="{{ route('owner.orders.cancellations.review', [$order->id, $order->latestCancellationRequest->id]) }}" onsubmit="return confirm('Tolak permintaan pembatalan ini?');">
+                                            @csrf
+                                            <input type="hidden" name="decision" value="reject">
+                                            <label class="field-label" for="rejection-reason">Alasan penolakan <span class="required-mark" aria-hidden="true">*</span></label>
+                                            <textarea id="rejection-reason" name="rejection_reason" rows="3" maxlength="2000" required>{{ old('rejection_reason') }}</textarea>
+                                            <button class="button button-secondary" type="submit">Tolak permintaan</button>
+                                        </form>
+                                    </div>
+                                @endif
                             @else
                                 <span class="owner-muted">Tidak ada permintaan pembatalan</span>
                             @endif
@@ -99,6 +115,20 @@
                             @endif
                         </div>
                     </div>
+                    @if ($order->status->value === 'processing')
+                        <div class="owner-cancel-order">
+                            <h3>Batalkan pesanan sebagai pemilik</h3>
+                            @if ($order->payment?->status->value === 'paid')
+                                <x-alert tone="warning">Pembayaran sudah diterima. Setelah pembatalan, pengembalian dana perlu ditransfer dan dicatat secara manual.</x-alert>
+                            @endif
+                            <form method="post" action="{{ route('owner.orders.cancel', $order->id) }}" onsubmit="return confirm('Batalkan pesanan ini? Tindakan ini tidak dapat dibatalkan.');">
+                                @csrf
+                                <label class="field-label" for="owner-cancel-reason">Alasan pembatalan <span class="required-mark" aria-hidden="true">*</span></label>
+                                <textarea id="owner-cancel-reason" name="reason" rows="3" maxlength="2000" required>{{ old('reason') }}</textarea>
+                                <button class="button" type="submit">Batalkan pesanan</button>
+                            </form>
+                        </div>
+                    @endif
                 </section>
 
                 <section class="owner-panel" aria-labelledby="owner-order-activity-title">

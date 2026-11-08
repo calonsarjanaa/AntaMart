@@ -51,7 +51,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 | **UI-10** | Customer order history and order details | UI-09, UI-06 | ✅ Implemented |
 | **UI-11** | Store-owner authentication and console shell | UI-00 | ✅ Implemented |
 | **UI-12** | Owner order list, filters, and order detail | UI-11 | ✅ Implemented |
-| **UI-13** | Cancellation review and owner-initiated cancellation | UI-12 | 📋 Pending |
+| **UI-13** | Cancellation review and owner-initiated cancellation | UI-12 | ✅ Implemented |
 | **UI-14** | Manual refund recording and resellable item selection | UI-12 | 📋 Pending |
 | **UI-15** | Manual shipment and delivery management | UI-12 | 📋 Pending |
 | **UI-16** | Order audit activity view | UI-12 | 📋 Pending |
@@ -207,6 +207,8 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 - Confirm consequential actions and refresh displayed state after server response.
 - Explain manual refund follow-up for paid orders.
 
+**Implemented:** Added the owner cancellation queue, request review actions on order detail, required rejection and owner-cancellation reasons, confirmation prompts, and manual refund guidance for paid orders. Actions use `CancellationService`, so stale decisions and invalid order states return through the shared error display while persisted state and audit events remain server-controlled.
+
 **Done when:** owner actions follow backend status rules, duplicate decisions cannot appear successful, and changed request/order state is reflected in the UI.
 
 ### UI-14: Manual refund recording and resellable item selection
@@ -251,5 +253,5 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 3. **Accounts and operations:** UI-09 through UI-16 (customer history and store-owner console).
 4. **Release readiness:** UI-17 (end-to-end and accessibility review).
 
-The recommended next implementation task is **UI-13**, to add cancellation review and owner-initiated cancellation actions.
+The recommended next implementation task is **UI-14**, to add manual refund recording and resellable item selection.
 
