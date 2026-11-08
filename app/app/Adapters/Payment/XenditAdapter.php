@@ -55,6 +55,12 @@ class XenditAdapter implements PaymentGatewayInterface
             ];
         }
 
+        foreach (['success_redirect_url', 'failure_redirect_url'] as $redirectField) {
+            if (!empty($metadata[$redirectField])) {
+                $payload[$redirectField] = $metadata[$redirectField];
+            }
+        }
+
         $response = Http::withBasicAuth($secretKey, '')
             ->timeout(15)
             ->post("{$this->baseUrl}/v2/invoices", $payload);

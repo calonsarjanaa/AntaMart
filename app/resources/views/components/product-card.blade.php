@@ -8,15 +8,17 @@
 @endphp
 
 <article {{ $attributes->class(['product-card']) }}>
-    <a class="product-card-link" href="{{ $href }}" aria-label="View {{ data_get($product, 'name') }}">
+    <a class="product-card-link" href="{{ $href }}" aria-label="Lihat {{ data_get($product, 'name') }}">
         <div class="product-card-media">
             @if ($imageUrl)
                 <img src="{{ $imageUrl }}" alt="{{ data_get($product, 'name') }}" loading="lazy">
             @else
-                <span class="product-card-placeholder" aria-hidden="true"><i></i><i></i><i></i></span>
+                <span class="product-card-placeholder" aria-hidden="true">
+                    <svg viewBox="0 0 32 32" fill="none"><path d="m5 10 11-6 11 6v12l-11 6-11-6V10Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="m5.5 10 10.5 6 10.5-6M16 16v12M10 7l11 6" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                </span>
             @endif
             <span class="product-stock-label {{ $hasStock ? 'stock-available' : 'stock-unavailable' }}">
-                {{ $hasStock ? 'In stock' : 'Sold out' }}
+                {{ $hasStock ? 'Tersedia' : 'Stok habis' }}
             </span>
         </div>
         <div class="product-card-content">

@@ -41,10 +41,10 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 | **UI-00** | UI foundation, route strategy, and shared layout | — | ✅ Implemented |
 | **UI-01** | Catalog data and storefront read path | UI-00 | ✅ Implemented |
 | **UI-02** | Storefront shell and responsive design system | UI-00 | ✅ Implemented |
-| **UI-03** | Product listing, detail, and stock states | UI-01, UI-02 | 📋 Pending |
-| **UI-04** | Shopping cart | UI-02, UI-03 | 📋 Pending |
-| **UI-05** | Guest and customer checkout | UI-01, UI-04 | 📋 Pending |
-| **UI-06** | Payment handoff and order result page | UI-05 | 📋 Pending |
+| **UI-03** | Product listing, detail, and stock states | UI-01, UI-02 | ✅ Implemented |
+| **UI-04** | Shopping cart | UI-02, UI-03 | ✅ Implemented |
+| **UI-05** | Guest and customer checkout | UI-01, UI-04 | ✅ Implemented |
+| **UI-06** | Payment handoff and order result page | UI-05 | ✅ Implemented |
 | **UI-07** | Guest order tracking | UI-00, UI-02 | 📋 Pending |
 | **UI-08** | Guest cancellation request and withdrawal | UI-07 | 📋 Pending |
 | **UI-09** | Customer authentication and account foundation | UI-00 | 📋 Pending |
@@ -69,7 +69,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 **Done when:** the app has a working storefront shell and page navigation; owner pages cannot be opened by guests or customer-role accounts; shared session-status and validation-error presentation is available for later forms.
 
-**Implemented:** Replaced the Laravel welcome page with a responsive storefront landing shell, added shared Blade layout and reusable form-field/status-badge components, flash/error presentation, a role-protected owner placeholder, and HTML 403 handling. Browser pages use the web session and CSRF middleware; API role failures remain JSON. Owner sign-in and forms remain in UI-11; catalog presentation and cart remain in UI-02 through UI-04.
+**Implemented:** Replaced the Laravel welcome page with a responsive storefront landing shell, added shared Blade layout and reusable form-field/status-badge components, flash/error presentation, a role-protected owner placeholder, and HTML 403 handling. Browser pages use the web session and CSRF middleware; API role failures remain JSON. Owner sign-in and forms remain in UI-11; cart interactions remain in UI-04.
 
 ### ✅ UI-01: Catalog data and storefront read path
 
@@ -91,37 +91,44 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 **Done when:** storefront pages share a consistent layout, keyboard focus is visible, and the core shell works without horizontal overflow at mobile widths.
 
-**Implemented:** Added reusable alert, empty-state, loading-state, price, and product-card components; standardized shared layout colors and container tokens; added product-card stock/image/price styling and tablet/mobile layouts; and updated reduced-motion behavior to include animation.
+**Implemented:** Added reusable alert, empty-state, loading-state, price, and product-card components. The storefront visual direction follows the supplied reference: compact white navigation, blue/cyan hero, light neutral background, small service cards, filter chips, and simple product cards. Avoid invented ratings, discounts, shipping claims, or unsupported categories. Responsive tablet/mobile layouts and reduced-motion behavior are included.
 
-### UI-03: Product listing, detail, and stock states
+### ✅ UI-03: Product listing, detail, and stock states
 
 - Create a catalog page with product cards, price, variant selection or variant summary, and clear stock/availability state.
-- Create a product detail page with description, available variants, price, and quantity control.
+- Create a product detail page with description, available variants, price, and stock state.
 - Add empty catalog and not-found states. Do not show inactive variants as purchasable.
 - Add search/category/filter controls only when backed by available catalog fields; defer fields that do not exist.
 
-**Done when:** a customer can find a seeded product, select an available variant, see its price and stock state, and add it to the cart.
+**Done when:** a customer can find a seeded product, open its detail page, and see variant price and stock state. Cart and quantity selection are handled in UI-04.
+
+**Implemented:** Added server-rendered product listing and detail routes using active catalog records. Product name/description search and stock-availability filters use existing fields. Product cards show price and stock state without ratings or promotional claims; missing images use a neutral placeholder. Category filters are omitted because the current catalog has no category data.
 
 ### UI-04: Shopping cart
 
-- Add/remove variants, change quantity, display line totals and subtotal, and continue shopping or proceed to checkout.
-- Choose and document cart persistence (session or browser storage) so refresh behavior is predictable.
+- Add/remove variants, change quantity, display line totals and subtotal, and continue shopping.
+- Persist only variant IDs and quantities in the Laravel session; read current product names, prices, and stock from the database when rendering the cart.
 - Revalidate stock and price on the server at checkout; the cart display is never authoritative for final price or availability.
 - Handle unavailable or changed variants without losing the rest of the cart.
 
-**Done when:** cart changes persist according to the chosen policy, totals recalculate correctly, and server-side checkout remains the source of truth.
+**Done when:** cart changes persist in the session, totals recalculate from current database prices, stock changes are surfaced and correctable, and checkout continues to validate the final cart server-side. The checkout handoff/form is completed in UI-05.
 
-### UI-05: Guest and customer checkout
+**Implemented:** Added session-backed add, update, and remove actions with server-side stock checks, a cart page with current item prices and subtotal, and an item count in the header. Inactive or unavailable items remain removable; the final checkout handoff is left for UI-05.
 
-- Collect guest email and phone, required recipient/address fields, and supported shipping method data.
-- Support authenticated customers where customer authentication exists; keep guest checkout available.
-- Submit an idempotency key and selected variant IDs/quantities to the server.
+### ✅ UI-05: Guest and customer checkout
+
+- Collect guest email/phone and required recipient/address fields. No shipping-method control is shown because the current backend calculates shipping without accepting or persisting a method.
+- Keep guest checkout available; customer accounts are deferred to UI-09.
+- Submit the session cart's variant IDs and quantities with a server-generated idempotency key; the browser cannot override cart prices or quantities.
 - Display field-level validation errors and stock conflicts while preserving safe form input.
-- Show server-calculated subtotal, shipping, and total before submission when the backend can provide an authoritative quote.
+- Show the current database-priced subtotal and explain that the backend calculates shipping and the final total from the submitted address.
+- Redirect to the payment URL when available; if payment-session creation fails, preserve the order and offer a retry for that same order.
 
 **Done when:** valid guest checkout creates one order despite repeated submission; invalid address, unavailable stock, and gateway failure are explained without losing the user's next step.
 
-### UI-06: Payment handoff and order result page
+**Implemented:** Added a responsive guest checkout form, session-cart handoff, server-side idempotency, authoritative catalog/stock repricing, and Xendit payment redirection. A stock race returns the shopper to the cart with an actionable message. If Xendit cannot create a session, the order and reservation are retained and the shopper can retry payment on the same order. Shipping is calculated by the existing backend; selectable methods and pre-submit shipping quotes are not supported by the current contract.
+
+### ✅ UI-06: Payment handoff and order result page
 
 - Redirect to the gateway payment URL only when a session URL exists.
 - If session creation fails, show order ID, pending-payment state, and a retry action authorized by customer session or matching guest email.
@@ -129,6 +136,8 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 - Explain expiry and the next action for a pending, paid, expired, or late-payment/manual-refund state.
 
 **Done when:** all payment states have a clear next step and only backend-confirmed state is presented as paid.
+
+**Implemented:** Xendit invoices now receive signed success/failure return URLs. The result page reads the current order/payment state from the database, so the redirect itself never marks an order paid. It explains pending, confirmed, expired, cancelled, shipped, completed, late-payment, and manual-refund states, shows the order snapshot and totals, and exposes payment continuation/retry only while the backend state allows it. Signed result links expire after three days.
 
 ### UI-07: Guest order tracking
 
@@ -230,5 +239,5 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 3. **Accounts and operations:** UI-09 through UI-16 (customer history and store-owner console).
 4. **Release readiness:** UI-17 (end-to-end and accessibility review).
 
-The recommended next implementation task is **UI-02**, to finish the shared responsive design system, followed by **UI-03** to build product listing/detail pages on top of the catalog read path.
+The recommended next implementation task is **UI-07**, to build a guest order tracking form and display the limited order/shipping details returned by the existing tracking flow.
 

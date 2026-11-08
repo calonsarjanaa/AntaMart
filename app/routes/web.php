@@ -1,6 +1,9 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Storefront\StorefrontController;
+use App\Http\Controllers\Storefront\CartController;
+use App\Http\Controllers\Storefront\BrowserCheckoutController;
 
 /*
 |--------------------------------------------------------------------------
@@ -13,7 +16,17 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::view('/', 'storefront.home')->name('storefront.home');
+Route::get('/', [StorefrontController::class, 'index'])->name('storefront.home');
+Route::get('/products/{slug}', [StorefrontController::class, 'show'])->name('storefront.products.show');
+Route::get('/cart', [CartController::class, 'index'])->name('storefront.cart.index');
+Route::post('/cart/items', [CartController::class, 'store'])->name('storefront.cart.items.store');
+Route::patch('/cart/items/{variantId}', [CartController::class, 'update'])->name('storefront.cart.items.update');
+Route::delete('/cart/items/{variantId}', [CartController::class, 'destroy'])->name('storefront.cart.items.destroy');
+Route::get('/checkout', [BrowserCheckoutController::class, 'create'])->name('storefront.checkout.create');
+Route::post('/checkout', [BrowserCheckoutController::class, 'store'])->name('storefront.checkout.store');
+Route::post('/checkout/payment/retry', [BrowserCheckoutController::class, 'retryPayment'])->name('storefront.checkout.payment.retry');
+Route::get('/checkout/result/{orderId}', [BrowserCheckoutController::class, 'result'])->middleware('signed')->name('storefront.checkout.result');
+Route::post('/checkout/result/{orderId}/retry', [BrowserCheckoutController::class, 'retryResultPayment'])->middleware('signed')->name('storefront.checkout.result.retry');
 
 Route::view('/owner', 'owner.index')
     ->middleware('role:store_owner')
