@@ -19,6 +19,7 @@
             @if (auth('web')->user()?->isStoreOwner())
                 <nav class="owner-nav" aria-label="Navigasi console">
                     <a @class(['is-active' => request()->routeIs('owner.dashboard')]) href="{{ route('owner.dashboard') }}">Dashboard</a>
+                    <a @class(['is-active' => request()->routeIs('owner.orders.*')]) href="{{ route('owner.orders.index') }}">Pesanan</a>
                 </nav>
                 <div class="owner-header-actions">
                     <span class="owner-user-name">{{ auth('web')->user()->name }}</span>

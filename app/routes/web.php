@@ -9,6 +9,7 @@ use App\Http\Controllers\Storefront\BrowserGuestCancellationController;
 use App\Http\Controllers\Storefront\CustomerAuthController;
 use App\Http\Controllers\Storefront\CustomerOrderController;
 use App\Http\Controllers\Admin\OwnerAuthController;
+use App\Http\Controllers\Admin\OwnerOrderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -64,5 +65,7 @@ Route::middleware('guest:web')->prefix('/owner')->name('owner.')->group(function
 
 Route::middleware(['auth:web', 'role:store_owner'])->prefix('/owner')->name('owner.')->group(function () {
     Route::view('/', 'owner.index')->name('dashboard');
+    Route::get('/orders', [OwnerOrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{orderId}', [OwnerOrderController::class, 'show'])->name('orders.show');
     Route::post('/logout', [OwnerAuthController::class, 'logout'])->name('logout');
 });

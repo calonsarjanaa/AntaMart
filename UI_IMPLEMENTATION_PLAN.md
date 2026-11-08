@@ -50,7 +50,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 | **UI-09** | Customer authentication and account foundation | UI-00 | ✅ Implemented |
 | **UI-10** | Customer order history and order details | UI-09, UI-06 | ✅ Implemented |
 | **UI-11** | Store-owner authentication and console shell | UI-00 | ✅ Implemented |
-| **UI-12** | Owner order list, filters, and order detail | UI-11 | 📋 Pending |
+| **UI-12** | Owner order list, filters, and order detail | UI-11 | ✅ Implemented |
 | **UI-13** | Cancellation review and owner-initiated cancellation | UI-12 | 📋 Pending |
 | **UI-14** | Manual refund recording and resellable item selection | UI-12 | 📋 Pending |
 | **UI-15** | Manual shipment and delivery management | UI-12 | 📋 Pending |
@@ -189,7 +189,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 **Implemented:** Added a separately throttled owner login/logout flow, a session-protected `/owner` console shell with owner-only middleware, responsive navigation, breadcrumbs, alert space, and reusable table/confirmation styles. There is no public owner registration. An optional environment-configured seeder creates an initial owner only when the credentials are explicitly set, refuses to promote an existing customer, and does not reset an existing owner's password.
 
-### UI-12: Owner order list, filters, and order detail
+### ✅ UI-12: Owner order list, filters, and order detail
 
 - Show paginated orders with status, payment state, buyer type/contact summary appropriate to owner access, total, and date.
 - Filter by order/payment status and search by order ID/email where supported.
@@ -197,6 +197,8 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 - Use pagination and query scopes rather than loading the full order database into a page.
 
 **Done when:** owner can find an order, inspect its timeline and fulfillment state, and no store data is exposed through customer routes.
+
+**Implemented:** Added a paginated owner order list with filters for order/payment status and search by order ID or buyer email. Order details show saved item/address snapshots, buyer contact, totals, payment, shipment, latest cancellation/refund state, and up to 20 recent audit events without exposing raw audit payloads. Queries eager-load displayed relations and paginate results; all routes remain inside the authenticated `store_owner` web middleware group.
 
 ### UI-13: Cancellation review and owner-initiated cancellation
 
@@ -249,5 +251,5 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 3. **Accounts and operations:** UI-09 through UI-16 (customer history and store-owner console).
 4. **Release readiness:** UI-17 (end-to-end and accessibility review).
 
-The recommended next implementation task is **UI-12**, to add the owner order list, filters, and order detail view.
+The recommended next implementation task is **UI-13**, to add cancellation review and owner-initiated cancellation actions.
 

@@ -12,7 +12,8 @@
         <h1 id="owner-title">Dashboard</h1>
         <div class="owner-welcome-card">
             <h2>Selamat datang, {{ auth('web')->user()->name }}</h2>
-            <p>Console owner siap digunakan. Pengelolaan pesanan, pembatalan, pengembalian dana, dan pengiriman akan tersedia pada bagian berikutnya.</p>
+            <p>Gunakan console ini untuk meninjau pesanan dan aktivitas operasional toko.</p>
+            <a class="button button-primary" href="{{ route('owner.orders.index') }}">Buka daftar pesanan</a>
         </div>
     </section>
 @endsection
