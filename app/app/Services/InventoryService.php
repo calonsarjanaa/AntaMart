@@ -87,8 +87,45 @@ class InventoryService
         });
     }
 
+    /** Restore stock committed for an unpaid COD order cancelled before shipment. */
+    public function restockConvertedReservations(Order $order, ?int $actorId = null, string $actorType = 'system'): void
+    {
+        $reservations = $order->reservations()
+            ->where('status', 'converted')
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->get();
+        $restockedItems = [];
+
+        foreach ($reservations as $reservation) {
+            $updated = DB::table('product_variants')
+                ->where('id', $reservation->product_variant_id)
+                ->increment('stock_physical', $reservation->quantity);
+
+            if ($updated !== 1) {
+                throw new RuntimeException("Cannot restore missing product variant [{$reservation->product_variant_id}].");
+            }
+
+            $reservation->update(['status' => 'restocked']);
+            $restockedItems[] = [
+                'product_variant_id' => $reservation->product_variant_id,
+                'quantity' => $reservation->quantity,
+            ];
+        }
+
+        if ($restockedItems !== []) {
+            AuditEvent::dispatch(
+                'stock.restocked_after_cod_cancellation',
+                $order->id,
+                $actorId,
+                $actorType,
+                ['items' => $restockedItems]
+            );
+        }
+    }
+
     /**
-     * Atomically convert reservation to physical stock deduction upon confirmed payment (FR-INV-004, FR-INV-005).
+     * Atomically convert a reservation to committed physical stock for a paid or COD order (FR-INV-004, FR-INV-005).
      *
      * @param Order $order
      */

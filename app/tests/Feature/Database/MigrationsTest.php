@@ -91,3 +91,7 @@ test('refunds table has manual tracking fields', function () {
     }
 });
 
+test('payments table stores the selected payment method', function () {
+    expect(Schema::hasColumn('payments', 'payment_method'))->toBeTrue();
+});
+

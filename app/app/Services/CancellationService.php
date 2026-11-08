@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\CancellationStatus;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Events\AuditEvent;
 use App\Models\CancellationRequest as CancellationRequestModel;
@@ -15,7 +16,8 @@ use Illuminate\Validation\ValidationException;
 class CancellationService
 {
     public function __construct(
-        protected RefundService $refundService
+        protected RefundService $refundService,
+        protected InventoryService $inventoryService
     ) {}
 
     public function submitRequest(Order $order, ?User $user, ?string $guestEmail, string $reason): CancellationRequestModel
@@ -206,6 +208,8 @@ class CancellationService
 
         if ($payment?->status === PaymentStatus::Paid) {
             $this->refundService->flagForOrder($order, "Order cancellation: {$reason}", $actor);
+        } elseif ($payment?->payment_method === PaymentMethod::CashOnDelivery) {
+            $this->inventoryService->restockConvertedReservations($order, $actor->id, $actor->role);
         }
     }
 

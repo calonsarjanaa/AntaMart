@@ -1,6 +1,6 @@
 # AntaMart Transaction & Fulfillment API
 
-Laravel 10 API for checkout, inventory reservations, Xendit payments, cancellations, refunds, shipment tracking, guest order lookup, and audit history.
+Laravel 10 API for checkout, inventory reservations, Xendit and cash-on-delivery payments, cancellations, refunds, shipment tracking, guest order lookup, and audit history.
 
 ## Requirements
 
@@ -8,7 +8,7 @@ Laravel 10 API for checkout, inventory reservations, Xendit payments, cancellati
 - Composer
 - MySQL (the migrations use MySQL-compatible schema features)
 - A running database queue worker for delayed payment expiry jobs
-- Xendit credentials for real payment sessions and webhook callbacks
+- Xendit credentials for online payment sessions and webhook callbacks (not needed to place COD orders)
 
 ## Local setup
 

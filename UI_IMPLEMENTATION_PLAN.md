@@ -54,8 +54,8 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 | **UI-13** | Cancellation review and owner-initiated cancellation | UI-12 | ✅ Implemented |
 | **UI-14** | Manual refund recording and resellable item selection | UI-12 | ✅ Implemented |
 | **UI-15** | Manual shipment and delivery management | UI-12 | ✅ Implemented |
-| **UI-16** | Order audit activity view | UI-12 | 📋 Pending |
-| **UI-17** | End-to-end UI verification, accessibility, and polish | UI-03–UI-16 | 📋 Pending |
+| **UI-16** | Order audit activity view | UI-12 | ✅ Implemented |
+| **UI-17** | End-to-end UI verification, accessibility, and polish | UI-03–UI-16 | ✅ Implemented |
 
 ## Detailed tasks and completion criteria
 
@@ -119,6 +119,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 - Collect guest email/phone and required recipient/address fields. No shipping-method control is shown because the current backend calculates shipping without accepting or persisting a method.
 - Keep guest checkout available alongside authenticated customer checkout.
+- Offer Xendit online payment or COD; explain that COD is due at delivery and is marked paid only after the owner confirms cash receipt.
 - Submit the session cart's variant IDs and quantities with a server-generated idempotency key; the browser cannot override cart prices or quantities.
 - Display field-level validation errors and stock conflicts while preserving safe form input.
 - Show the current database-priced subtotal and explain that the backend calculates shipping and the final total from the submitted address.
@@ -126,7 +127,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 **Done when:** valid guest checkout creates one order despite repeated submission; invalid address, unavailable stock, and gateway failure are explained without losing the user's next step.
 
-**Implemented:** Added a responsive guest checkout form, session-cart handoff, server-side idempotency, authoritative catalog/stock repricing, and Xendit payment redirection. Authenticated customers use their account email and do not need guest contact fields. A stock race returns the shopper to the cart with an actionable message. If Xendit cannot create a session, the order and reservation are retained and the shopper can retry payment on the same order. Shipping is calculated by the existing backend; selectable methods and pre-submit shipping quotes are not supported by the current contract.
+**Implemented:** Added a responsive guest checkout form, session-cart handoff, server-side idempotency, authoritative catalog/stock repricing, and Xendit/COD payment selection. Authenticated customers use their account email and do not need guest contact fields. A stock race returns the shopper to the cart with an actionable message. If Xendit cannot create a session, the order and reservation are retained and the shopper can retry payment on the same order. COD orders enter processing with stock committed and payment due at delivery. Shipping is calculated by the existing backend; selectable shipping methods and pre-submit shipping quotes are not supported by the current contract.
 
 ### ✅ UI-06: Payment handoff and order result page
 
@@ -138,6 +139,8 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 **Done when:** all payment states have a clear next step and only backend-confirmed state is presented as paid.
 
 **Implemented:** Xendit invoices now receive signed success/failure return URLs. The result page reads the current order/payment state from the database, so the redirect itself never marks an order paid. It explains pending, confirmed, expired, cancelled, shipped, completed, late-payment, and manual-refund states, shows the order snapshot and totals, and exposes payment continuation/retry only while the backend state allows it. Signed result links expire after three days.
+
+COD results instead show processing and the amount due at delivery; no Xendit session or payment expiry is created.
 
 ### ✅ UI-07: Guest order tracking
 
@@ -226,10 +229,11 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 - For processing orders, collect tracking number and optional URL and create the manual shipment.
 - For shipped orders, allow an owner to confirm delivery.
+- For COD orders, require the owner to confirm cash collection as part of delivery confirmation.
 - Display current tracking and delivery status on customer and owner order views.
 - Clearly label shipment as manual; do not present carrier integration that is not implemented.
 
-**Implemented:** Added owner actions to record a manual tracking number and optional tracking URL for processing orders, and to confirm delivery for shipped, undelivered orders. Shipment state, timestamps, and tracking details appear on the order page; service validation and state transitions remain authoritative.
+**Implemented:** Added owner actions to record a manual tracking number and optional tracking URL for processing orders, and to confirm delivery for shipped, undelivered orders. COD delivery confirmation requires the owner to affirm cash collection and then marks the payment paid. Shipment state, timestamps, tracking details, and payment method appear on the order page; service validation and state transitions remain authoritative.
 
 **Done when:** server-approved order transitions are reflected and invalid/repeated shipment actions return clear feedback.
 
@@ -237,6 +241,8 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 - Display the order's audit events in chronological order with human-readable labels, actor, time, and safe metadata.
 - Avoid rendering secrets or unnecessary personal/payment data from payloads.
+
+**Implemented:** Expanded the owner order timeline with readable event names, localized actor labels, and allowlisted summaries for safe operational details such as order totals, item counts, and tracking method. Payment identifiers, invoice URLs, raw callback payloads, and internal record IDs are omitted. The latest 20 events are displayed oldest-to-newest, with an indicator when older history exists.
 
 **Done when:** owners can understand important payment, inventory, cancellation, refund, and fulfillment events without exposing sensitive callback contents.
 
@@ -248,6 +254,10 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 - Review keyboard-only navigation, labels, contrast, focus, semantic headings, and mobile layouts.
 - Run existing backend feature tests and relevant frontend/build checks; add UI tests as part of this task.
 
+**Implemented:** Added browser feature coverage for catalog-to-cart guest checkout through payment handoff and tracking, guest cancellation, owner cancellation/refund/shipment operations, account order isolation, and empty, validation, unauthorized, not-found, and rate-limit responses. Fixed the storefront document language and grouped product variant radios under an accessible fieldset. The suite and Vite production build pass.
+
+**Remaining release checks:** Exercise keyboard-only and screen-reader navigation and visually review contrast and responsive layouts in real browsers. The storefront uses synchronous server-rendered pages, so it has no in-page loading state; generic server-error rendering is handled by Laravel and was not forced in tests. Payment handoff uses a fake Xendit response in automated coverage; verify callbacks against a local/staging gateway setup separately.
+
 **Done when:** documented UI flows work end to end against the local application, no role boundary or order ownership check relies only on browser code, and remaining gaps are recorded.
 
 ## Delivery milestones
@@ -257,5 +267,5 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 3. **Accounts and operations:** UI-09 through UI-16 (customer history and store-owner console).
 4. **Release readiness:** UI-17 (end-to-end and accessibility review).
 
-The recommended next implementation task is **UI-16**, to finish the order audit activity view.
+UI-00 through UI-17 are implemented. Complete the remaining manual release checks listed under UI-17 before release.
 

@@ -27,7 +27,7 @@
                         <div class="customer-order-meta">
                             <span>{{ $order->created_at?->timezone(config('app.timezone'))->format('d M Y, H:i') }}</span>
                             <span>{{ $order->items_count }} item</span>
-                            @if ($order->payment)<span>Pembayaran <x-status-badge :status="$order->payment->status->value" /></span>@endif
+                            @if ($order->payment)<span>Pembayaran <x-status-badge :status="$order->payment->status->value" />{{ $order->payment->payment_method->value === 'cod' ? ' · COD' : '' }}</span>@endif
                         </div>
                         <div class="customer-order-footer">
                             <strong><x-price :amount="$order->total" /></strong>

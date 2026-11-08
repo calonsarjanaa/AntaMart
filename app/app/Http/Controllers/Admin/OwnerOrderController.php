@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
 
 class OwnerOrderController extends Controller
 {
@@ -80,11 +81,80 @@ class OwnerOrderController extends Controller
         $auditLogs = $order->auditLogs()
             ->with('actor')
             ->latest('created_at')
-            ->limit(20)
+            ->limit(21)
             ->get()
-            ->reverse()
             ->values();
+        $hasMoreAuditLogs = $auditLogs->count() > 20;
+        $auditLogs = $auditLogs->take(20)->reverse()->values();
 
-        return view('owner.orders.show', compact('order', 'auditLogs', 'eligibleResellableItemIds'));
+        $eventLabels = [
+            'order.created' => 'Pesanan dibuat',
+            'payment.session_created' => 'Invoice pembayaran dibuat',
+            'payment.confirmed' => 'Pembayaran dikonfirmasi',
+            'payment.late_detected' => 'Pembayaran terlambat diterima',
+            'payment.cod_order_created' => 'Pesanan COD dibuat',
+            'payment.cod_collected' => 'Pembayaran tunai diterima',
+            'payment.expired' => 'Batas pembayaran berakhir',
+            'stock.deducted' => 'Stok dikurangi untuk pesanan',
+            'stock.restocked_after_cod_cancellation' => 'Stok dikembalikan setelah pembatalan COD',
+            'cancellation.requested' => 'Permintaan pembatalan diajukan',
+            'cancellation.withdrawn' => 'Permintaan pembatalan ditarik',
+            'cancellation.approved' => 'Pembatalan disetujui',
+            'cancellation.rejected' => 'Pembatalan ditolak',
+            'refund.flagged' => 'Pengembalian dana perlu diproses manual',
+            'refund.marked_refunded' => 'Pengembalian dana dicatat selesai',
+            'tracking.added' => 'Informasi pengiriman dicatat',
+            'shipment.delivered' => 'Pesanan ditandai diterima',
+        ];
+
+        $auditLogs->each(function ($log) use ($eventLabels): void {
+            $log->setAttribute('display_event', $eventLabels[$log->event] ?? Str::headline(str_replace('.', ' ', $log->event)));
+            $log->setAttribute('display_actor', $log->actor?->name ?? match ($log->actor_type) {
+                'system' => 'Sistem',
+                'guest' => 'Tamu',
+                'store_owner' => 'Pemilik toko',
+                'customer' => 'Pelanggan',
+                default => Str::headline($log->actor_type ?? 'system'),
+            });
+            $log->setAttribute('display_summary', $this->auditSummary($log->event, $log->payload ?? []));
+        });
+
+        return view('owner.orders.show', compact('order', 'auditLogs', 'eligibleResellableItemIds', 'hasMoreAuditLogs'));
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function auditSummary(string $event, array $payload): ?string
+    {
+        if (in_array($event, [
+            'order.created', 'payment.session_created', 'payment.confirmed', 'payment.late_detected',
+            'refund.flagged', 'refund.marked_refunded', 'payment.cod_order_created', 'payment.cod_collected',
+        ], true) && is_numeric($payload['amount'] ?? $payload['total'] ?? null)) {
+            $amount = number_format((float) ($payload['amount'] ?? $payload['total']), 0, ',', '.');
+            $summary = "Nominal Rp {$amount}";
+
+            if ($event === 'order.created' && is_numeric($payload['item_count'] ?? null)) {
+                $summary .= ' · ' . (int) $payload['item_count'] . ' item';
+            }
+
+            return $summary;
+        }
+
+        if (in_array($event, ['stock.deducted', 'stock.restocked_after_cod_cancellation'], true)
+            && is_array($payload['items'] ?? null)) {
+            $quantities = array_filter(array_column($payload['items'], 'quantity'), 'is_numeric');
+            $count = count($payload['items']);
+
+            return $count ? "{$count} varian · " . array_sum($quantities) . ' unit' : null;
+        }
+
+        if ($event === 'cancellation.approved' && ($payload['owner_initiated'] ?? false) === true) {
+            return 'Pembatalan dimulai oleh pemilik toko';
+        }
+
+        if ($event === 'tracking.added' && isset($payload['method'])) {
+            return 'Metode: ' . Str::headline((string) $payload['method']);
+        }
+
+        return null;
     }
 }

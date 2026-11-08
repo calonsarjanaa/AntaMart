@@ -6,6 +6,7 @@
     @php
         $orderStatus = $order->status->value;
         $paymentStatus = $order->payment?->status?->value;
+        $paymentMethod = $order->payment?->payment_method?->value;
         $latePayment = $orderStatus === 'expired' && $paymentStatus === 'paid';
     @endphp
 
@@ -26,8 +27,13 @@
                         <h2 id="order-status-title">Menunggu konfirmasi pembayaran</h2>
                         <p>Status ini akan diperbarui setelah sistem menerima konfirmasi dari penyedia pembayaran. Kembali dari halaman pembayaran saja belum berarti pembayaran berhasil.</p>
                     @elseif ($orderStatus === 'processing')
-                        <h2 id="order-status-title">Pembayaran dikonfirmasi</h2>
-                        <p>Pembayaran telah dikonfirmasi oleh sistem. Pesanan sedang diproses oleh toko.</p>
+                        @if ($paymentMethod === 'cod' && $paymentStatus !== 'paid')
+                            <h2 id="order-status-title">Pesanan COD sedang diproses</h2>
+                            <p>Siapkan pembayaran tunai sebesar <x-price :amount="$order->total" /> saat pesanan diterima. Pembayaran dicatat setelah toko mengonfirmasi uang diterima.</p>
+                        @else
+                            <h2 id="order-status-title">Pembayaran dikonfirmasi</h2>
+                            <p>Pembayaran telah dikonfirmasi oleh sistem. Pesanan sedang diproses oleh toko.</p>
+                        @endif
                     @elseif ($orderStatus === 'expired')
                         <h2 id="order-status-title">Batas waktu pembayaran lewat</h2>
                         <p>Pesanan kedaluwarsa dan reservasi stok telah dilepas. Jika kamu sudah membayar, hubungi toko agar pembayaran dapat diperiksa.</p>
@@ -36,7 +42,11 @@
                         <p>Pesanan ini telah dibatalkan. Jika pembayaran sudah dilakukan, proses pengembalian dana ditangani secara manual.</p>
                     @elseif ($orderStatus === 'shipped')
                         <h2 id="order-status-title">Pesanan dikirim</h2>
-                        <p>Pesanan telah dikirim oleh toko.</p>
+                        @if ($paymentMethod === 'cod' && $paymentStatus !== 'paid')
+                            <p>Siapkan pembayaran tunai sebesar <x-price :amount="$order->total" /> saat pesanan diterima.</p>
+                        @else
+                            <p>Pesanan telah dikirim oleh toko.</p>
+                        @endif
                     @elseif ($orderStatus === 'completed')
                         <h2 id="order-status-title">Pesanan selesai</h2>
                         <p>Pesanan telah ditandai selesai.</p>
@@ -46,6 +56,9 @@
                         <span>Status pesanan <x-status-badge :status="$orderStatus" /></span>
                         <span>Status pembayaran <x-status-badge :status="$paymentStatus ?? 'pending'" /></span>
                     </div>
+                    @if ($paymentMethod)
+                        <p class="order-result-note">Metode pembayaran: {{ $paymentMethod === 'cod' ? 'Bayar di tempat (COD)' : 'Xendit' }}</p>
+                    @endif
 
                     @if ($latePayment)
                         <x-alert tone="warning" class="order-result-alert">

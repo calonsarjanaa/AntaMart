@@ -4,7 +4,7 @@ This roadmap was established in **Phase 2 (Technical Planning)** and is tracked 
 
 ---
 
-## Task Summary (Total: 14 Tasks)
+## Task Summary (Total: 15 Tasks)
 
 | Task ID | Task Description | Requirement IDs | Status | Commit |
 |---|---|---|:---:|---|
@@ -20,8 +20,9 @@ This roadmap was established in **Phase 2 (Technical Planning)** and is tracked 
 | **T-10** | Shipment Management (`ShipmentService` + Admin Tracking Endpoints) | FR-SHP-001, 003, 005 | ✅ Implemented; verification pending | — |
 | **T-11** | Guest Order Tracking Endpoint + Rate Limiting | FR-HIS-001, FR-TRX-011 | ✅ Implemented; verification pending | — |
 | **T-12** | Audit Trail (Events, `RecordAuditLog` Listener, `AuditService`) | TRX-012 | ✅ Implemented; verification pending | — |
-| **T-13** | Comprehensive Integration & Feature Test Suite | All Requirements | ✅ Implemented | 70 tests, 355 assertions |
+| **T-13** | Comprehensive Integration & Feature Test Suite | All Requirements | ✅ Implemented | 80 tests, 493 assertions |
 | **T-14** | API Documentation & Known Limitations Report | Documentation | ✅ Implemented | OpenAPI, Postman, setup & limits |
+| **T-15** | Cash on Delivery checkout and cash collection | Payment, inventory, shipment | ✅ Implemented | — |
 
 ---
 
@@ -140,7 +141,15 @@ This roadmap was established in **Phase 2 (Technical Planning)** and is tracked 
 - Added a Known Limitations report covering payment, callback, queue, manual refund/shipping, guest access, security, and verification notes.
 - Final verification: run `php artisan test` and validate the API artifacts before commit.
 
+### ✅ T-15: Cash on Delivery
+
+- Checkout accepts `xendit` or `cod`; omitted API payment methods continue to default to Xendit.
+- COD orders enter `processing` immediately with payment pending, no payment expiry, and committed inventory.
+- The Store Owner confirms cash collection while confirming delivery; payment changes to `paid` only after that confirmation.
+- Cancelling an unpaid COD order before shipment restores its committed inventory and does not create a refund.
+- Browser and API checkout, delivery confirmation, tracking, owner order details, OpenAPI, and Postman documentation cover the COD lifecycle.
+
 ## Follow-on: UI Implementation
 
-The backend MVP is complete. The storefront and store-owner UI are tracked separately in [UI_IMPLEMENTATION_PLAN.md](UI_IMPLEMENTATION_PLAN.md), starting with the Laravel web foundation and minimum catalog read path.
+The storefront and store-owner UI are tracked separately in [UI_IMPLEMENTATION_PLAN.md](UI_IMPLEMENTATION_PLAN.md), starting with the Laravel web foundation and minimum catalog read path.
 

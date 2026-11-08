@@ -32,6 +32,15 @@
           }
         },
         {
+          "name": "Checkout (guest, COD)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Accept", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"idempotency_key\": \"checkout-cod-local-001\",\n  \"guest_email\": \"{{guestEmail}}\",\n  \"guest_phone\": \"+628123456789\",\n  \"payment_method\": \"cod\",\n  \"items\": [{\"product_variant_id\": {{variantId}}, \"quantity\": 1}],\n  \"shipping_address\": {\"recipient_name\": \"Rina Putri\", \"phone\": \"+628123456789\", \"address_line1\": \"Jl. Mawar 10\", \"city\": \"Bandung\", \"province\": \"Jawa Barat\", \"postal_code\": \"40111\", \"country\": \"ID\"}\n}"},
+            "url": "{{baseUrl}}/checkout"
+          }
+        },
+        {
           "name": "Retry payment session (guest)",
           "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Accept", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"guest_email\": \"{{guestEmail}}\"}"}, "url": "{{baseUrl}}/orders/{{orderId}}/payment-session"}
         },
@@ -70,7 +79,8 @@
         },
         {
           "name": "Confirm delivery",
-          "request": {"method": "POST", "header": [{"key": "Accept", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{storeOwnerToken}}"}], "url": "{{baseUrl}}/admin/orders/{{orderId}}/shipment/confirm-delivery"}
+          "description": "For a COD order, send cash_received=true only after collecting the cash.",
+          "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Accept", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{storeOwnerToken}}"}], "body": {"mode": "raw", "raw": "{\"cash_received\": true}"}, "url": "{{baseUrl}}/admin/orders/{{orderId}}/shipment/confirm-delivery"}
         }
       ]
     },

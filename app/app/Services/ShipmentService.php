@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
+use App\Enums\PaymentStatus;
 use App\Events\AuditEvent;
 use App\Models\Order;
 use App\Models\Shipment;
@@ -53,14 +55,23 @@ class ShipmentService
         });
     }
 
-    public function confirmDelivery(Order $order, User $owner): Shipment
+    public function confirmDelivery(Order $order, User $owner, bool $cashReceived = false): Shipment
     {
-        return DB::transaction(function () use ($order, $owner): Shipment {
+        return DB::transaction(function () use ($order, $owner, $cashReceived): Shipment {
             $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
 
             if ($order->status !== OrderStatus::Shipped) {
                 throw ValidationException::withMessages([
                     'order' => 'Only shipped orders can be marked as delivered.',
+                ]);
+            }
+
+            $payment = $order->payment()->lockForUpdate()->first();
+            $isCashOnDelivery = $payment?->payment_method === PaymentMethod::CashOnDelivery;
+
+            if ($isCashOnDelivery && !$cashReceived) {
+                throw ValidationException::withMessages([
+                    'cash_received' => 'Konfirmasikan penerimaan uang tunai untuk menyelesaikan pesanan COD.',
                 ]);
             }
 
@@ -74,6 +85,21 @@ class ShipmentService
 
             $shipment->delivered_at = now();
             $shipment->save();
+
+            if ($isCashOnDelivery) {
+                $payment->status = PaymentStatus::Paid;
+                $payment->paid_at = now();
+                $payment->save();
+
+                AuditEvent::dispatch(
+                    'payment.cod_collected',
+                    $order->id,
+                    $owner->id,
+                    $owner->role,
+                    ['amount' => $payment->amount]
+                );
+            }
+
             $order->transitionTo(OrderStatus::Completed);
 
             AuditEvent::dispatch(

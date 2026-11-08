@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Adapters\Shipping\ShippingProviderInterface;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
+use App\Enums\PaymentMethod;
 use App\Events\AuditEvent;
 use App\Exceptions\InsufficientStockException;
 use App\Models\Order;
@@ -34,6 +35,13 @@ class CheckoutService
     public function checkout(array $data, ?User $user = null): Order
     {
         $idempotencyKey = $data['idempotency_key'];
+        $paymentMethod = PaymentMethod::tryFrom($data['payment_method'] ?? PaymentMethod::Xendit->value);
+
+        if (!$paymentMethod) {
+            throw ValidationException::withMessages([
+                'payment_method' => 'Metode pembayaran tidak valid.',
+            ]);
+        }
 
         // FR-TRX-005 — Idempotency check: return existing order if previously created
         $existingOrder = Order::where('idempotency_key', $idempotencyKey)
@@ -118,14 +126,17 @@ class CheckoutService
             $total,
             $preparedItems,
             $itemsData,
-            $data
+            $data,
+            $paymentMethod
         ) {
             // FR-TRX-003 & FR-TRX-004 — Create Order with snapshot values
             $order = Order::create([
                 'customer_id'     => $user?->id,
                 'guest_email'     => $guestEmail,
                 'guest_phone'     => $guestPhone,
-                'status'          => OrderStatus::PendingPayment,
+                'status'          => $paymentMethod === PaymentMethod::CashOnDelivery
+                    ? OrderStatus::Processing
+                    : OrderStatus::PendingPayment,
                 'subtotal'        => $subtotal,
                 'shipping_cost'   => $shippingCost,
                 'total'           => $total,
@@ -178,9 +189,10 @@ class CheckoutService
 
             // Create initial payment tracking record
             Payment::create([
-                'order_id' => $order->id,
-                'amount'   => $total,
-                'status'   => PaymentStatus::Pending,
+                'order_id'       => $order->id,
+                'payment_method' => $paymentMethod,
+                'amount'         => $total,
+                'status'         => PaymentStatus::Pending,
             ]);
 
             AuditEvent::dispatch(
@@ -193,6 +205,17 @@ class CheckoutService
                     'item_count' => count($preparedItems),
                 ]
             );
+
+            if ($paymentMethod === PaymentMethod::CashOnDelivery) {
+                $this->inventoryService->convertReservationsToPhysicalDeduction($order);
+                AuditEvent::dispatch(
+                    'payment.cod_order_created',
+                    $order->id,
+                    $user?->id,
+                    $user ? 'customer' : 'guest',
+                    ['amount' => $order->total]
+                );
+            }
 
             return $order->load(['items', 'address', 'payment']);
         });

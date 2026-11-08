@@ -95,6 +95,7 @@ class BrowserCheckoutController extends Controller
             'shipping_address.city' => ['required', 'string', 'max:100'],
             'shipping_address.province' => ['required', 'string', 'max:100'],
             'shipping_address.postal_code' => ['required', 'string', 'max:20'],
+            'payment_method' => ['required', 'in:xendit,cod'],
         ])->validate();
 
         $items = [];
@@ -112,6 +113,7 @@ class BrowserCheckoutController extends Controller
             $order = $checkoutService->checkout([
                 ...$validated,
                 'idempotency_key' => $idempotencyKey,
+                'payment_method' => $validated['payment_method'],
                 'items' => $items,
                 'shipping_address' => [
                     ...$validated['shipping_address'],

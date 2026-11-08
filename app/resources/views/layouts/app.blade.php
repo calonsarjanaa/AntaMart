@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,7 +10,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body>
-    <a class="skip-link" href="#main-content">Skip to content</a>
+    <a class="skip-link" href="#main-content">Lewati ke konten</a>
     <header class="site-header">
         <div class="header-inner">
             <a class="wordmark" href="{{ route('storefront.home') }}" aria-label="AntaMart home">
@@ -51,7 +51,7 @@
     @endif
     @if ($errors->any())
         <x-alert tone="error" class="flash-message">
-            <p>Please review the following:</p>
+            <p>Periksa kembali informasi berikut:</p>
             <ul>@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
         </x-alert>
     @endif

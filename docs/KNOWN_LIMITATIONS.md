@@ -4,7 +4,7 @@ This document records the limits of the current transaction and fulfillment MVP.
 
 ## Product and workflow limits
 
-- **Single payment provider:** checkout creates Xendit invoices. There is no provider selection, payment-method orchestration, or fallback provider.
+- **Payment methods:** checkout supports Xendit online payment and COD. Xendit is the only gateway; there are no other gateway integrations or configurable COD eligibility rules. COD is currently available to all orders and cash collection is confirmed manually by the Store Owner at delivery.
 - **Basic product catalog:** products contain a name, description, optional image path, active flag, and sort order. There are no categories, product search metadata, image-management UI, or product-authoring screens. Local seed products are synthetic examples.
 - **Gateway outage:** if invoice creation fails, checkout still creates the order and reserves inventory. The order remains `pending_payment`; retry `POST /api/orders/{id}/payment-session` after the gateway recovers. A retry must use the authorized customer or the matching guest email.
 - **Callback processing:** the webhook controller processes the callback synchronously before returning `200`. There is no separate durable callback queue or dead-letter workflow. Duplicate payment IDs are deduplicated by the application.

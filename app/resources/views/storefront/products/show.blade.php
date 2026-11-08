@@ -29,23 +29,25 @@
                     <p class="product-description">{{ $product['description'] }}</p>
                 @endif
                 <div class="variant-list">
-                    <h2>Pilihan produk</h2>
-                    @foreach ($product['variants'] as $variant)
-                        <label class="variant-option {{ $variant['in_stock'] ? '' : 'variant-sold-out' }}">
-                            <span class="variant-option-choice">
-                                @if ($variant['in_stock'])
-                                    <input type="radio" name="product_variant_id" value="{{ $variant['id'] }}" form="add-to-cart-form" required @checked(old('product_variant_id') == $variant['id'] || (!old('product_variant_id') && $variant['id'] === $firstAvailableVariantId))>
-                                @else
-                                    <input type="radio" disabled aria-label="{{ $variant['name'] }} habis">
-                                @endif
-                            </span>
-                            <span><strong>{{ $variant['name'] }}</strong><small>SKU {{ $variant['sku'] }}</small></span>
-                            <span class="variant-option-meta">
-                                <x-price :amount="$variant['price']" />
-                                <x-status-badge :status="$variant['in_stock'] ? 'Tersedia' : 'Habis'" />
-                            </span>
-                        </label>
-                    @endforeach
+                    <h2 id="variant-list-title">Pilihan produk</h2>
+                    <fieldset class="variant-options" aria-labelledby="variant-list-title">
+                        @foreach ($product['variants'] as $variant)
+                            <label class="variant-option {{ $variant['in_stock'] ? '' : 'variant-sold-out' }}">
+                                <span class="variant-option-choice">
+                                    @if ($variant['in_stock'])
+                                        <input type="radio" name="product_variant_id" value="{{ $variant['id'] }}" form="add-to-cart-form" required @checked(old('product_variant_id') == $variant['id'] || (!old('product_variant_id') && $variant['id'] === $firstAvailableVariantId))>
+                                    @else
+                                        <input type="radio" disabled aria-label="{{ $variant['name'] }} habis">
+                                    @endif
+                                </span>
+                                <span><strong>{{ $variant['name'] }}</strong><small>SKU {{ $variant['sku'] }}</small></span>
+                                <span class="variant-option-meta">
+                                    <x-price :amount="$variant['price']" />
+                                    <x-status-badge :status="$variant['in_stock'] ? 'Tersedia' : 'Habis'" />
+                                </span>
+                            </label>
+                        @endforeach
+                    </fieldset>
                 </div>
                 @if (collect($product['variants'])->contains('in_stock', true))
                     <form id="add-to-cart-form" class="add-to-cart-form" method="post" action="{{ route('storefront.cart.items.store') }}">
