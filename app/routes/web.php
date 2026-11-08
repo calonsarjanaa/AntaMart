@@ -8,6 +8,7 @@ use App\Http\Controllers\Storefront\BrowserGuestOrderTrackingController;
 use App\Http\Controllers\Storefront\BrowserGuestCancellationController;
 use App\Http\Controllers\Storefront\CustomerAuthController;
 use App\Http\Controllers\Storefront\CustomerOrderController;
+use App\Http\Controllers\Admin\OwnerAuthController;
 
 /*
 |--------------------------------------------------------------------------
@@ -56,6 +57,12 @@ Route::middleware(['auth:web', 'role:customer'])->prefix('/account')->name('stor
     Route::post('/orders/{orderId}/cancellation-requests/{requestId}/withdraw', [CustomerOrderController::class, 'withdrawCancellation'])->name('orders.cancellation.withdraw');
 });
 
-Route::view('/owner', 'owner.index')
-    ->middleware('role:store_owner')
-    ->name('owner.dashboard');
+Route::middleware('guest:web')->prefix('/owner')->name('owner.')->group(function () {
+    Route::get('/login', [OwnerAuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [OwnerAuthController::class, 'login'])->middleware('throttle:owner-login')->name('auth.login');
+});
+
+Route::middleware(['auth:web', 'role:store_owner'])->prefix('/owner')->name('owner.')->group(function () {
+    Route::view('/', 'owner.index')->name('dashboard');
+    Route::post('/logout', [OwnerAuthController::class, 'logout'])->name('logout');
+});

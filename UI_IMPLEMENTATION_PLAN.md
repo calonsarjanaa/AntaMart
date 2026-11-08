@@ -49,7 +49,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 | **UI-08** | Guest cancellation request and withdrawal | UI-07 | ✅ Implemented |
 | **UI-09** | Customer authentication and account foundation | UI-00 | ✅ Implemented |
 | **UI-10** | Customer order history and order details | UI-09, UI-06 | ✅ Implemented |
-| **UI-11** | Store-owner authentication and console shell | UI-00 | 📋 Pending |
+| **UI-11** | Store-owner authentication and console shell | UI-00 | ✅ Implemented |
 | **UI-12** | Owner order list, filters, and order detail | UI-11 | 📋 Pending |
 | **UI-13** | Cancellation review and owner-initiated cancellation | UI-12 | 📋 Pending |
 | **UI-14** | Manual refund recording and resellable item selection | UI-12 | 📋 Pending |
@@ -69,7 +69,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 **Done when:** the app has a working storefront shell and page navigation; owner pages cannot be opened by guests or customer-role accounts; shared session-status and validation-error presentation is available for later forms.
 
-**Implemented:** Replaced the Laravel welcome page with a responsive storefront landing shell, added shared Blade layout and reusable form-field/status-badge components, flash/error presentation, a role-protected owner placeholder, and HTML 403 handling. Browser pages use the web session and CSRF middleware; API role failures remain JSON. Owner sign-in and forms remain in UI-11; cart interactions remain in UI-04.
+**Implemented:** Replaced the Laravel welcome page with a responsive storefront landing shell, added shared Blade layout and reusable form-field/status-badge components, flash/error presentation, a role-protected owner placeholder, and HTML 403 handling. Browser pages use the web session and CSRF middleware; API role failures remain JSON. Owner sign-in and console shell are completed in UI-11; owner order tools remain in UI-12 onward. Cart interactions are completed in UI-04.
 
 ### ✅ UI-01: Catalog data and storefront read path
 
@@ -179,13 +179,15 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 **Implemented:** Added paginated, customer-scoped order history and detail pages. Details use saved item/address snapshots and show payment, shipment, refund, and cancellation states. Customer cancellation requests and withdrawals call the existing `CancellationService`; every read and mutation is scoped to the signed-in customer's order relationship.
 
-### UI-11: Store-owner authentication and console shell
+### ✅ UI-11: Store-owner authentication and console shell
 
 - Add/confirm a secure owner sign-in path and role-protected web middleware.
 - Build owner navigation, dashboard shell, breadcrumbs, responsive tables, confirmations, and consistent alerts.
 - Do not expose owner actions through customer storefront navigation.
 
 **Done when:** only an authenticated `store_owner` can reach owner pages; direct URL access as guest/customer is denied and redirects or shows a clear forbidden page.
+
+**Implemented:** Added a separately throttled owner login/logout flow, a session-protected `/owner` console shell with owner-only middleware, responsive navigation, breadcrumbs, alert space, and reusable table/confirmation styles. There is no public owner registration. An optional environment-configured seeder creates an initial owner only when the credentials are explicitly set, refuses to promote an existing customer, and does not reset an existing owner's password.
 
 ### UI-12: Owner order list, filters, and order detail
 
@@ -247,5 +249,5 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 3. **Accounts and operations:** UI-09 through UI-16 (customer history and store-owner console).
 4. **Release readiness:** UI-17 (end-to-end and accessibility review).
 
-The recommended next implementation task is **UI-11**, to add store-owner authentication and the protected console shell.
+The recommended next implementation task is **UI-12**, to add the owner order list, filters, and order detail view.
 

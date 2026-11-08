@@ -1,12 +1,18 @@
-@extends('layouts.app')
+@extends('layouts.owner')
 
-@section('title', 'Owner dashboard')
+@section('title', 'Dashboard owner')
+
+@section('breadcrumbs')
+    <span>Dashboard</span>
+@endsection
 
 @section('content')
-    <section class="owner-placeholder page-container" aria-labelledby="owner-title">
-        <p class="eyebrow">AntaMart · Store operations</p>
-        <h1 id="owner-title">Your workspace<br><em>is taking shape.</em></h1>
-        <p class="owner-placeholder-copy">The owner console will bring orders, cancellation requests, refunds, and shipments together in one place.</p>
-        <a class="text-link" href="{{ route('storefront.home') }}">← Back to the storefront</a>
+    <section class="owner-dashboard" aria-labelledby="owner-title">
+        <p class="section-eyebrow">ANTAMART · OPERASIONAL TOKO</p>
+        <h1 id="owner-title">Dashboard</h1>
+        <div class="owner-welcome-card">
+            <h2>Selamat datang, {{ auth('web')->user()->name }}</h2>
+            <p>Console owner siap digunakan. Pengelolaan pesanan, pembatalan, pengembalian dana, dan pengiriman akan tersedia pada bagian berikutnya.</p>
+        </div>
     </section>
 @endsection
