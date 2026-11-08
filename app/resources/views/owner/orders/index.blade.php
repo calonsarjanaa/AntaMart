@@ -68,7 +68,7 @@
                                 </td>
                                 <td>{{ $order->created_at?->timezone(config('app.timezone'))->format('d M Y, H:i') }}</td>
                                 <td><x-status-badge :status="$order->status->value" /></td>
-                                <td>@if ($order->payment)<x-status-badge :status="$order->payment->status->value" />@else<span class="owner-muted">—</span>@endif</td>
+                                <td>@if ($order->payment)<x-status-badge :status="$order->payment->status->value" />@if ($order->payment->payment_method->value === 'cod')<small>COD</small>@endif @else<span class="owner-muted">—</span>@endif</td>
                                 <td>{{ $order->items_count }}</td>
                                 <td><x-price :amount="$order->total" /></td>
                                 <td><a class="owner-table-action" href="{{ route('owner.orders.show', $order->id) }}">Detail</a></td>

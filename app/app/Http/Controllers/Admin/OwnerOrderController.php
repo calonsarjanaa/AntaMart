@@ -92,8 +92,11 @@ class OwnerOrderController extends Controller
             'payment.session_created' => 'Invoice pembayaran dibuat',
             'payment.confirmed' => 'Pembayaran dikonfirmasi',
             'payment.late_detected' => 'Pembayaran terlambat diterima',
+            'payment.cod_order_created' => 'Pesanan COD dibuat',
+            'payment.cod_collected' => 'Pembayaran tunai diterima',
             'payment.expired' => 'Batas pembayaran berakhir',
             'stock.deducted' => 'Stok dikurangi untuk pesanan',
+            'stock.restocked_after_cod_cancellation' => 'Stok dikembalikan setelah pembatalan COD',
             'cancellation.requested' => 'Permintaan pembatalan diajukan',
             'cancellation.withdrawn' => 'Permintaan pembatalan ditarik',
             'cancellation.approved' => 'Pembatalan disetujui',
@@ -124,7 +127,7 @@ class OwnerOrderController extends Controller
     {
         if (in_array($event, [
             'order.created', 'payment.session_created', 'payment.confirmed', 'payment.late_detected',
-            'refund.flagged', 'refund.marked_refunded',
+            'refund.flagged', 'refund.marked_refunded', 'payment.cod_order_created', 'payment.cod_collected',
         ], true) && is_numeric($payload['amount'] ?? $payload['total'] ?? null)) {
             $amount = number_format((float) ($payload['amount'] ?? $payload['total']), 0, ',', '.');
             $summary = "Nominal Rp {$amount}";
@@ -136,7 +139,8 @@ class OwnerOrderController extends Controller
             return $summary;
         }
 
-        if ($event === 'stock.deducted' && is_array($payload['items'] ?? null)) {
+        if (in_array($event, ['stock.deducted', 'stock.restocked_after_cod_cancellation'], true)
+            && is_array($payload['items'] ?? null)) {
             $quantities = array_filter(array_column($payload['items'], 'quantity'), 'is_numeric');
             $count = count($payload['items']);
 

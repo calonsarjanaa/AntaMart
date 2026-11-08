@@ -48,8 +48,8 @@ paths:
   /checkout:
     post:
       tags: [Storefront]
-      summary: Create an order and payment session
-      description: Available to guests and authenticated customers. Guest checkout requires guest_email and guest_phone. Idempotency key deduplicates retries.
+      summary: Create an order with Xendit or cash-on-delivery payment
+      description: Available to guests and authenticated customers. Guest checkout requires guest_email and guest_phone. payment_method defaults to xendit. COD orders enter processing with payment pending, stock is deducted, and the Store Owner confirms cash collection at delivery. Idempotency key deduplicates retries.
       security: []
       requestBody:
         required: true
@@ -73,9 +73,10 @@ paths:
                 postal_code: '40111'
                 country: ID
               shipping_method: regular
+              payment_method: xendit
       responses:
         '201':
-          description: Order created; payment_url can be null if the gateway could not create a session.
+          description: Order created; payment_url is null for COD or when Xendit could not create a session.
           content:
             application/json:
               schema:
@@ -127,6 +128,7 @@ paths:
                   order_id: 01HXYZ1234567890ABCDEFGHJK
                   status: shipped
                   payment_status: paid
+                  payment_method: xendit
                   subtotal: '120000.00'
                   shipping_cost: '15000.00'
                   total: '135000.00'
@@ -286,12 +288,21 @@ paths:
   /admin/orders/{id}/shipment/confirm-delivery:
     post:
       tags: [Store owner]
-      summary: Confirm shipment delivery manually
+      summary: Confirm shipment delivery, and COD cash collection when applicable
+      description: For COD orders, cash_received must be true. The payment is marked paid only when the owner confirms the cash was collected.
       security: [{sanctumBearer: []}]
       parameters:
         - $ref: '#/components/parameters/OrderId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cash_received: {type: boolean, description: Required as true for COD orders}
       responses:
-        '200': {description: Delivery recorded and order moved to completed}
+        '200': {description: Delivery recorded; COD payment is paid when cash_received is true}
         '401': {description: Not authenticated}
         '403': {description: Store-owner role required}
         '404': {description: Order not found}
@@ -375,6 +386,7 @@ components:
             postal_code: {type: string, maxLength: 20}
             country: {type: string, maxLength: 10}
         shipping_method: {type: string, maxLength: 50}
+        payment_method: {type: string, enum: [xendit, cod], default: xendit}
     CheckoutResponse:
       type: object
       properties:
@@ -383,7 +395,9 @@ components:
           type: object
           properties:
             order_id: {type: string}
-            status: {type: string, enum: [pending_payment]}
+            status: {type: string, enum: [pending_payment, processing]}
+            payment_method: {type: string, enum: [xendit, cod]}
+            payment_status: {type: string, enum: [pending, paid, expired, failed]}
             subtotal: {type: string}
             shipping_cost: {type: string}
             total: {type: string}

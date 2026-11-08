@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Adapters\Payment\PaymentGatewayInterface;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Events\AuditEvent;
 use App\Exceptions\InvalidOrderStateException;
 use App\Jobs\ExpireUnpaidOrder;
@@ -31,6 +32,10 @@ class PaymentService
      */
     public function createPaymentSession(Order $order): ?array
     {
+        if ($order->payment && $order->payment->payment_method !== PaymentMethod::Xendit) {
+            throw new InvalidOrderStateException($order->status, OrderStatus::PendingPayment, 'Only Xendit orders can create a payment session.');
+        }
+
         if ($order->status !== OrderStatus::PendingPayment) {
             throw new InvalidOrderStateException($order->status, OrderStatus::PendingPayment, "Cannot create payment session for order in state [{$order->status->value}].");
         }

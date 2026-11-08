@@ -40,6 +40,23 @@
                         <x-form-field name="shipping_address[postal_code]" label="Kode pos" autocomplete="shipping postal-code" required />
                     </div>
                 </section>
+
+                <section class="checkout-form-section" aria-labelledby="payment-method-title">
+                    <h2 id="payment-method-title">Metode pembayaran</h2>
+                    <fieldset class="payment-method-options" aria-describedby="payment-method-help">
+                        <legend class="visually-hidden">Pilih metode pembayaran</legend>
+                        <label class="payment-method-option">
+                            <input type="radio" name="payment_method" value="xendit" required @checked(old('payment_method', 'xendit') === 'xendit')>
+                            <span><strong>Bayar online</strong><small>Pembayaran aman melalui Xendit.</small></span>
+                        </label>
+                        <label class="payment-method-option">
+                            <input type="radio" name="payment_method" value="cod" required @checked(old('payment_method') === 'cod')>
+                            <span><strong>Bayar di tempat (COD)</strong><small>Bayar tunai saat pesanan diterima.</small></span>
+                        </label>
+                        <small id="payment-method-help">Total pembayaran termasuk ongkos kirim yang dihitung saat pesanan dibuat.</small>
+                    </fieldset>
+                    @error('payment_method')<p class="field-error" id="payment-method-error">{{ $message }}</p>@enderror
+                </section>
             </div>
 
             <aside class="cart-summary checkout-summary" aria-labelledby="checkout-summary-title">

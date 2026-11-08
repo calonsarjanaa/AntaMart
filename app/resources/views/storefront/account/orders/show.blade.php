@@ -24,10 +24,19 @@
                         <span><span>Status pesanan</span><x-status-badge :status="$order->status->value" /></span>
                         <span><span>Status pembayaran</span><x-status-badge :status="$order->payment?->status?->value ?? 'pending'" /></span>
                     </div>
+                    @if ($order->payment?->payment_method?->value === 'cod')
+                        <p class="tracking-status-copy">Metode pembayaran: Bayar di tempat (COD).</p>
+                    @endif
                     @if ($order->status->value === 'pending_payment')
                         <p class="tracking-status-copy">Pesanan menunggu konfirmasi pembayaran.</p>
                     @elseif ($order->status->value === 'processing')
-                        <p class="tracking-status-copy">Pembayaran dikonfirmasi dan pesanan sedang diproses.</p>
+                        @if ($order->payment?->payment_method?->value === 'cod' && $order->payment?->status?->value !== 'paid')
+                            <p class="tracking-status-copy">Siapkan pembayaran tunai saat pesanan diterima. Toko akan mencatat pembayaran setelah uang diterima.</p>
+                        @else
+                            <p class="tracking-status-copy">Pembayaran dikonfirmasi dan pesanan sedang diproses.</p>
+                        @endif
+                    @elseif ($order->status->value === 'shipped' && $order->payment?->payment_method?->value === 'cod' && $order->payment?->status?->value !== 'paid')
+                        <p class="tracking-status-copy">Pesanan telah dikirim. Siapkan pembayaran tunai saat pesanan diterima.</p>
                     @elseif ($order->status->value === 'expired' && $order->payment?->status?->value === 'paid')
                         <x-alert tone="warning" class="order-result-alert">Pembayaran diterima setelah pesanan kedaluwarsa. Pengembalian dana ditangani secara manual oleh toko.</x-alert>
                     @endif

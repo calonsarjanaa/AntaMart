@@ -3,6 +3,8 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use App\Enums\PaymentMethod;
 
 class CheckoutRequest extends FormRequest
 {
@@ -35,6 +37,7 @@ class CheckoutRequest extends FormRequest
             'shipping_address.postal_code'    => ['required', 'string', 'max:20'],
             'shipping_address.country'        => ['nullable', 'string', 'max:10'],
             'shipping_method'                 => ['nullable', 'string', 'max:50'],
+            'payment_method'                  => ['sometimes', Rule::enum(PaymentMethod::class)],
         ];
     }
 }

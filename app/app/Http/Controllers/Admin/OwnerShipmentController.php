@@ -29,7 +29,11 @@ class OwnerShipmentController extends Controller
 
     public function confirmDelivery(Request $request, string $orderId, ShipmentService $shipmentService)
     {
-        $shipmentService->confirmDelivery(Order::findOrFail($orderId), $request->user('web'));
+        $shipmentService->confirmDelivery(
+            Order::with('payment')->findOrFail($orderId),
+            $request->user('web'),
+            $request->boolean('cash_received')
+        );
 
         return to_route('owner.orders.show', $orderId)
             ->with('status', 'Pesanan ditandai telah diterima.');

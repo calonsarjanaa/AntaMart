@@ -77,6 +77,7 @@ test('guest can browse, add to cart, check out, hand off payment, and track the 
     $this->post('/checkout', [
         'guest_email' => 'browser-buyer@example.test',
         'guest_phone' => '081234567890',
+        'payment_method' => 'xendit',
         'shipping_address' => [
             'recipient_name' => 'Browser Buyer',
             'phone' => '081234567890',

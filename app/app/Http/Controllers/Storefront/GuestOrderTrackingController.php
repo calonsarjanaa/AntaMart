@@ -26,6 +26,7 @@ class GuestOrderTrackingController extends Controller
                 'order_id'       => $order->id,
                 'status'         => $order->status->value,
                 'payment_status' => $order->payment?->status->value,
+                'payment_method' => $order->payment?->payment_method->value,
                 'subtotal'      => $order->subtotal,
                 'shipping_cost' => $order->shipping_cost,
                 'total'         => $order->total,

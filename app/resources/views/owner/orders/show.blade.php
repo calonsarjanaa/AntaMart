@@ -48,6 +48,7 @@
                             <span>Pembayaran</span>
                             @if ($order->payment)
                                 <x-status-badge :status="$order->payment->status->value" />
+                                @if ($order->payment->payment_method->value === 'cod')<small>Metode: Bayar di tempat (COD)</small>@endif
                                 @if ($order->payment->xendit_invoice_id)<small>Invoice {{ $order->payment->xendit_invoice_id }}</small>@endif
                                 @if ($order->payment->paid_at)<small>Dibayar {{ $order->payment->paid_at->timezone(config('app.timezone'))->format('d M Y, H:i') }}</small>@endif
                                 @if ($order->payment->expired_at)<small>Kedaluwarsa {{ $order->payment->expired_at->timezone(config('app.timezone'))->format('d M Y, H:i') }}</small>@endif
@@ -65,9 +66,16 @@
                                 @if ($order->shipment->tracking_url)<a href="{{ $order->shipment->tracking_url }}" target="_blank" rel="noopener noreferrer">Buka tautan pelacakan</a>@endif
                                 @if ($order->shipment->shipped_at)<small>Dikirim {{ $order->shipment->shipped_at->timezone(config('app.timezone'))->format('d M Y, H:i') }}</small>@endif
                                 @if ($order->shipment->delivered_at)<small>Diterima {{ $order->shipment->delivered_at->timezone(config('app.timezone'))->format('d M Y, H:i') }}</small>@endif
+                            @if ($order->payment?->payment_method?->value === 'cod')
+                                <small>Pembayaran: Bayar di tempat (COD)</small>
+                                @if ($order->payment->status->value === 'pending')<small>Uang tunai belum dikonfirmasi diterima.</small>@endif
+                            @endif
                                 @if ($order->status->value === 'shipped' && !$order->shipment->delivered_at)
                                     <form class="owner-shipment-action" method="post" action="{{ route('owner.orders.delivery.confirm', $order->id) }}" onsubmit="return confirm('Tandai pesanan ini telah diterima? Status akan berubah menjadi selesai.');">
                                         @csrf
+                                    @if ($order->payment?->payment_method?->value === 'cod')
+                                        <label class="owner-cod-confirmation"><input type="checkbox" name="cash_received" value="1" required> Saya mengonfirmasi uang COD sebesar <x-price :amount="$order->payment->amount" /> telah diterima.</label>
+                                    @endif
                                         <button class="button" type="submit">Tandai telah diterima</button>
                                     </form>
                                 @endif

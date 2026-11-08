@@ -392,6 +392,8 @@ button, input, textarea, select { font: inherit; }
 .owner-shipment-action { display: grid; width: 100%; gap: 7px; margin-top: 5px; }
 .owner-shipment-action input { width: 100%; min-height: 34px; padding: 7px 8px; border: 1px solid #d0d5dd; border-radius: 5px; color: #344054; font-size: 10px; }
 .owner-shipment-action .button { min-height: 34px; padding: 0 10px; font-size: 10px; }
+.owner-cod-confirmation { display: flex; align-items: flex-start; gap: 7px; color: #344054; font-size: 10px; line-height: 1.5; }
+.owner-cod-confirmation input { width: auto; min-height: 0; margin-top: 2px; accent-color: var(--blue); }
 .owner-order-buyer { position: sticky; top: 12px; display: flex; flex-direction: column; align-items: flex-start; gap: 7px; }
 .owner-order-buyer h2 { margin-bottom: 5px; }
 .owner-order-buyer h3 { margin: 3px 0 2px; color: #344054; font-size: 11px; }
@@ -438,6 +440,13 @@ button, input, textarea, select { font: inherit; }
 .variant-option-choice input { accent-color: var(--blue); }
 .variant-option-meta { margin-left: auto; }
 .variant-option > span:nth-child(2) { margin-right: auto; }
+.payment-method-options { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
+.payment-method-option { display: flex; align-items: flex-start; gap: 9px; padding: 11px; border: 1px solid #d0d5dd; border-radius: 6px; cursor: pointer; }
+.payment-method-option:has(input:checked) { border-color: var(--blue); background: #f5f8ff; }
+.payment-method-option input { margin-top: 2px; accent-color: var(--blue); }
+.payment-method-option > span { display: grid; gap: 4px; }
+.payment-method-option strong { color: #344054; font-size: 11px; }
+.payment-method-option small, .payment-method-options > small { color: #667085; font-size: 10px; line-height: 1.5; }
 
 @media (max-width: 760px) {
     .header-inner { grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; width: calc(100% - 18px); }

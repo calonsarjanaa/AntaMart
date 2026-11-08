@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\PaymentStatus;
+use App\Enums\PaymentMethod;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,6 +14,7 @@ class Payment extends Model
 
     protected $fillable = [
         'order_id',
+        'payment_method',
         'xendit_invoice_id',
         'xendit_payment_url',
         'amount',
@@ -23,6 +25,7 @@ class Payment extends Model
     ];
 
     protected $casts = [
+        'payment_method'           => PaymentMethod::class,
         'status'                   => PaymentStatus::class,
         'amount'                   => 'decimal:2',
         'paid_at'                  => 'datetime',

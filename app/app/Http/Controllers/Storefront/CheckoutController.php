@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Storefront;
 
+use App\Enums\PaymentMethod;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CheckoutRequest;
 use App\Services\CheckoutService;
@@ -23,14 +24,18 @@ class CheckoutController extends Controller
         $user = $request->user();
         $order = $this->checkoutService->checkout($request->validated(), $user);
 
-        // FR-PAY-001 — Create payment session on Xendit
-        $paymentSession = $this->paymentService->createPaymentSession($order);
+        // COD orders enter processing immediately; only Xendit orders need an invoice session.
+        $paymentSession = $order->payment?->payment_method === PaymentMethod::Xendit
+            ? $this->paymentService->createPaymentSession($order)
+            : null;
 
         return response()->json([
             'message' => 'Order created successfully.',
             'data'    => [
                 'order_id'        => $order->id,
                 'status'          => $order->status->value,
+                'payment_method'  => $order->payment?->payment_method->value,
+                'payment_status'  => $order->payment?->status->value,
                 'subtotal'        => $order->subtotal,
                 'shipping_cost'   => $order->shipping_cost,
                 'total'           => $order->total,

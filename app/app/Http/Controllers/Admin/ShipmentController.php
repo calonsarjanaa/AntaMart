@@ -42,13 +42,22 @@ class ShipmentController extends Controller
 
     public function confirmDelivery(Request $request, string $id): JsonResponse
     {
-        $shipment = $this->shipmentService->confirmDelivery(Order::findOrFail($id), $request->user());
+        $request->validate([
+            'cash_received' => ['sometimes', 'boolean'],
+        ]);
+        $order = Order::with('payment')->findOrFail($id);
+        $shipment = $this->shipmentService->confirmDelivery(
+            $order,
+            $request->user(),
+            $request->boolean('cash_received')
+        );
 
         return response()->json([
             'message' => 'Delivery confirmed.',
             'data'    => [
                 'order_id'     => $shipment->order_id,
                 'delivered_at' => $shipment->delivered_at?->toIso8601String(),
+                'payment_status' => $order->payment()->value('status'),
             ],
         ]);
     }

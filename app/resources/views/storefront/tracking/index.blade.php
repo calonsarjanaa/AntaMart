@@ -26,6 +26,7 @@
                 @php
                     $orderStatus = $order->status->value;
                     $paymentStatus = $order->payment?->status?->value;
+                    $paymentMethod = $order->payment?->payment_method?->value;
                     $latePayment = $orderStatus === 'expired' && $paymentStatus === 'paid';
                 @endphp
                 <div class="tracking-result">
@@ -44,15 +45,26 @@
                         @if ($orderStatus === 'pending_payment')
                             <p class="tracking-status-copy">Pesanan menunggu konfirmasi pembayaran. Status akan berubah setelah sistem menerima pembaruan dari penyedia pembayaran.</p>
                         @elseif ($orderStatus === 'processing')
-                            <p class="tracking-status-copy">Pembayaran telah dikonfirmasi dan pesanan sedang diproses oleh toko.</p>
+                            @if ($paymentMethod === 'cod' && $paymentStatus !== 'paid')
+                                <p class="tracking-status-copy">Pesanan sedang diproses. Siapkan pembayaran tunai sebesar <x-price :amount="$order->total" /> saat pesanan diterima.</p>
+                            @else
+                                <p class="tracking-status-copy">Pembayaran telah dikonfirmasi dan pesanan sedang diproses oleh toko.</p>
+                            @endif
                         @elseif ($orderStatus === 'expired')
                             <p class="tracking-status-copy">Batas waktu pembayaran telah lewat dan reservasi stok dilepas.</p>
                         @elseif ($orderStatus === 'cancelled')
                             <p class="tracking-status-copy">Pesanan telah dibatalkan. Pengembalian dana, jika diperlukan, ditangani secara manual oleh toko.</p>
                         @elseif ($orderStatus === 'shipped')
-                            <p class="tracking-status-copy">Pesanan telah dikirim. Lihat informasi resi di bagian pengiriman.</p>
+                            @if ($paymentMethod === 'cod' && $paymentStatus !== 'paid')
+                                <p class="tracking-status-copy">Pesanan telah dikirim. Siapkan pembayaran tunai saat pesanan diterima.</p>
+                            @else
+                                <p class="tracking-status-copy">Pesanan telah dikirim. Lihat informasi resi di bagian pengiriman.</p>
+                            @endif
                         @elseif ($orderStatus === 'completed')
                             <p class="tracking-status-copy">Pesanan telah ditandai selesai.</p>
+                        @endif
+                        @if ($paymentMethod)
+                            <p class="tracking-status-copy">Metode pembayaran: {{ $paymentMethod === 'cod' ? 'Bayar di tempat (COD)' : 'Xendit' }}.</p>
                         @endif
                         @if ($latePayment)
                             <x-alert tone="warning" class="tracking-alert">Pembayaran diterima setelah pesanan kedaluwarsa. Pengembalian dana perlu ditangani secara manual oleh toko.</x-alert>
