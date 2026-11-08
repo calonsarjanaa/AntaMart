@@ -4,6 +4,15 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Storefront\StorefrontController;
 use App\Http\Controllers\Storefront\CartController;
 use App\Http\Controllers\Storefront\BrowserCheckoutController;
+use App\Http\Controllers\Storefront\BrowserGuestOrderTrackingController;
+use App\Http\Controllers\Storefront\BrowserGuestCancellationController;
+use App\Http\Controllers\Storefront\CustomerAuthController;
+use App\Http\Controllers\Storefront\CustomerOrderController;
+use App\Http\Controllers\Admin\OwnerAuthController;
+use App\Http\Controllers\Admin\OwnerOrderController;
+use App\Http\Controllers\Admin\OwnerCancellationController;
+use App\Http\Controllers\Admin\OwnerRefundController;
+use App\Http\Controllers\Admin\OwnerShipmentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,7 +36,45 @@ Route::post('/checkout', [BrowserCheckoutController::class, 'store'])->name('sto
 Route::post('/checkout/payment/retry', [BrowserCheckoutController::class, 'retryPayment'])->name('storefront.checkout.payment.retry');
 Route::get('/checkout/result/{orderId}', [BrowserCheckoutController::class, 'result'])->middleware('signed')->name('storefront.checkout.result');
 Route::post('/checkout/result/{orderId}/retry', [BrowserCheckoutController::class, 'retryResultPayment'])->middleware('signed')->name('storefront.checkout.result.retry');
+Route::get('/orders/track', [BrowserGuestOrderTrackingController::class, 'index'])->name('storefront.orders.track');
+Route::post('/orders/track', [BrowserGuestOrderTrackingController::class, 'store'])->middleware('throttle:10,1')->name('storefront.orders.track.lookup');
+Route::post('/orders/{id}/cancellation-requests', [BrowserGuestCancellationController::class, 'store'])
+    ->middleware(['signed', 'throttle:10,1'])
+    ->name('storefront.orders.cancellation.store');
+Route::post('/orders/{id}/cancellation-requests/{requestId}/withdraw', [BrowserGuestCancellationController::class, 'withdraw'])
+    ->middleware(['signed', 'throttle:10,1'])
+    ->name('storefront.orders.cancellation.withdraw');
 
-Route::view('/owner', 'owner.index')
-    ->middleware('role:store_owner')
-    ->name('owner.dashboard');
+Route::middleware('guest:web')->group(function () {
+    Route::get('/login', [CustomerAuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [CustomerAuthController::class, 'login'])->middleware('throttle:customer-login')->name('storefront.auth.login');
+    Route::get('/register', [CustomerAuthController::class, 'showRegistration'])->name('register');
+    Route::post('/register', [CustomerAuthController::class, 'register'])->middleware('throttle:customer-register')->name('storefront.auth.register');
+});
+
+Route::middleware(['auth:web', 'role:customer'])->prefix('/account')->name('storefront.account.')->group(function () {
+    Route::get('/', [CustomerAuthController::class, 'account'])->name('index');
+    Route::post('/logout', [CustomerAuthController::class, 'logout'])->name('logout');
+    Route::get('/orders', [CustomerOrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{orderId}', [CustomerOrderController::class, 'show'])->name('orders.show');
+    Route::post('/orders/{orderId}/cancellation-requests', [CustomerOrderController::class, 'requestCancellation'])->name('orders.cancellation.store');
+    Route::post('/orders/{orderId}/cancellation-requests/{requestId}/withdraw', [CustomerOrderController::class, 'withdrawCancellation'])->name('orders.cancellation.withdraw');
+});
+
+Route::middleware('guest:web')->prefix('/owner')->name('owner.')->group(function () {
+    Route::get('/login', [OwnerAuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [OwnerAuthController::class, 'login'])->middleware('throttle:owner-login')->name('auth.login');
+});
+
+Route::middleware(['auth:web', 'role:store_owner'])->prefix('/owner')->name('owner.')->group(function () {
+    Route::view('/', 'owner.index')->name('dashboard');
+    Route::get('/cancellations', [OwnerCancellationController::class, 'index'])->name('cancellations.index');
+    Route::get('/orders', [OwnerOrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{orderId}', [OwnerOrderController::class, 'show'])->name('orders.show');
+    Route::post('/orders/{orderId}/cancellation-requests/{requestId}/review', [OwnerCancellationController::class, 'review'])->name('orders.cancellations.review');
+    Route::post('/orders/{orderId}/cancel', [OwnerCancellationController::class, 'cancelOrder'])->name('orders.cancel');
+    Route::post('/orders/{orderId}/refund/mark-refunded', [OwnerRefundController::class, 'markRefunded'])->name('orders.refund.mark-refunded');
+    Route::post('/orders/{orderId}/shipment', [OwnerShipmentController::class, 'store'])->name('orders.shipment.store');
+    Route::post('/orders/{orderId}/delivery/confirm', [OwnerShipmentController::class, 'confirmDelivery'])->name('orders.delivery.confirm');
+    Route::post('/logout', [OwnerAuthController::class, 'logout'])->name('logout');
+});

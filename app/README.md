@@ -55,6 +55,10 @@ php artisan queue:work database
 
 The default seeder creates synthetic catalog items for local UI development. It uses `firstOrCreate` for variants so rerunning it does not reset existing variant stock.
 
+To create the first store-owner account, set `STORE_OWNER_NAME`, `STORE_OWNER_EMAIL`, and a unique `STORE_OWNER_PASSWORD` (at least 12 characters) in `.env` before running `php artisan db:seed`. Owner registration is not public. The seeder refuses to promote an existing customer account and does not change the password of an existing owner. Remove the password from `.env` after the account is created.
+
+If the catalog was already seeded, run `php artisan db:seed --class=StoreOwnerSeeder` after setting those values.
+
 The API is served below `/api`. The queue worker is needed for delayed order-expiry jobs. For a local callback, configure the Xendit dashboard or a webhook forwarder to send callbacks to `POST /api/webhooks/xendit` and set the same callback token in `XENDIT_WEBHOOK_TOKEN`.
 
 ## API reference
@@ -65,7 +69,7 @@ The API is served below `/api`. The queue worker is needed for delayed order-exp
 - [Implementation roadmap](../TECHNICAL_PLAN.md)
 - [Overall UI implementation plan](../UI_IMPLEMENTATION_PLAN.md)
 
-All API requests and responses use JSON. Store-owner routes require a Sanctum-authenticated user with the `store_owner` role. The customer authentication flow is outside this MVP; use an existing Sanctum token for authenticated routes.
+All API requests and responses use JSON. Store-owner API routes require a Sanctum-authenticated user with the `store_owner` role. The browser owner console uses a separate session sign-in at `/owner/login` and the same store-owner role; customer registration cannot grant owner access. Customer browser accounts use the web session guard.
 
 ## Tests
 

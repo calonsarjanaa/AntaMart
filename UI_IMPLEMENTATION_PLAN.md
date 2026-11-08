@@ -45,15 +45,15 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 | **UI-04** | Shopping cart | UI-02, UI-03 | ✅ Implemented |
 | **UI-05** | Guest and customer checkout | UI-01, UI-04 | ✅ Implemented |
 | **UI-06** | Payment handoff and order result page | UI-05 | ✅ Implemented |
-| **UI-07** | Guest order tracking | UI-00, UI-02 | 📋 Pending |
-| **UI-08** | Guest cancellation request and withdrawal | UI-07 | 📋 Pending |
-| **UI-09** | Customer authentication and account foundation | UI-00 | 📋 Pending |
-| **UI-10** | Customer order history and order details | UI-09, UI-06 | 📋 Pending |
-| **UI-11** | Store-owner authentication and console shell | UI-00 | 📋 Pending |
-| **UI-12** | Owner order list, filters, and order detail | UI-11 | 📋 Pending |
-| **UI-13** | Cancellation review and owner-initiated cancellation | UI-12 | 📋 Pending |
-| **UI-14** | Manual refund recording and resellable item selection | UI-12 | 📋 Pending |
-| **UI-15** | Manual shipment and delivery management | UI-12 | 📋 Pending |
+| **UI-07** | Guest order tracking | UI-00, UI-02 | ✅ Implemented |
+| **UI-08** | Guest cancellation request and withdrawal | UI-07 | ✅ Implemented |
+| **UI-09** | Customer authentication and account foundation | UI-00 | ✅ Implemented |
+| **UI-10** | Customer order history and order details | UI-09, UI-06 | ✅ Implemented |
+| **UI-11** | Store-owner authentication and console shell | UI-00 | ✅ Implemented |
+| **UI-12** | Owner order list, filters, and order detail | UI-11 | ✅ Implemented |
+| **UI-13** | Cancellation review and owner-initiated cancellation | UI-12 | ✅ Implemented |
+| **UI-14** | Manual refund recording and resellable item selection | UI-12 | ✅ Implemented |
+| **UI-15** | Manual shipment and delivery management | UI-12 | ✅ Implemented |
 | **UI-16** | Order audit activity view | UI-12 | 📋 Pending |
 | **UI-17** | End-to-end UI verification, accessibility, and polish | UI-03–UI-16 | 📋 Pending |
 
@@ -69,7 +69,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 **Done when:** the app has a working storefront shell and page navigation; owner pages cannot be opened by guests or customer-role accounts; shared session-status and validation-error presentation is available for later forms.
 
-**Implemented:** Replaced the Laravel welcome page with a responsive storefront landing shell, added shared Blade layout and reusable form-field/status-badge components, flash/error presentation, a role-protected owner placeholder, and HTML 403 handling. Browser pages use the web session and CSRF middleware; API role failures remain JSON. Owner sign-in and forms remain in UI-11; cart interactions remain in UI-04.
+**Implemented:** Replaced the Laravel welcome page with a responsive storefront landing shell, added shared Blade layout and reusable form-field/status-badge components, flash/error presentation, a role-protected owner placeholder, and HTML 403 handling. Browser pages use the web session and CSRF middleware; API role failures remain JSON. Owner sign-in and console shell are completed in UI-11; owner order tools remain in UI-12 onward. Cart interactions are completed in UI-04.
 
 ### ✅ UI-01: Catalog data and storefront read path
 
@@ -118,7 +118,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 ### ✅ UI-05: Guest and customer checkout
 
 - Collect guest email/phone and required recipient/address fields. No shipping-method control is shown because the current backend calculates shipping without accepting or persisting a method.
-- Keep guest checkout available; customer accounts are deferred to UI-09.
+- Keep guest checkout available alongside authenticated customer checkout.
 - Submit the session cart's variant IDs and quantities with a server-generated idempotency key; the browser cannot override cart prices or quantities.
 - Display field-level validation errors and stock conflicts while preserving safe form input.
 - Show the current database-priced subtotal and explain that the backend calculates shipping and the final total from the submitted address.
@@ -126,7 +126,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 **Done when:** valid guest checkout creates one order despite repeated submission; invalid address, unavailable stock, and gateway failure are explained without losing the user's next step.
 
-**Implemented:** Added a responsive guest checkout form, session-cart handoff, server-side idempotency, authoritative catalog/stock repricing, and Xendit payment redirection. A stock race returns the shopper to the cart with an actionable message. If Xendit cannot create a session, the order and reservation are retained and the shopper can retry payment on the same order. Shipping is calculated by the existing backend; selectable methods and pre-submit shipping quotes are not supported by the current contract.
+**Implemented:** Added a responsive guest checkout form, session-cart handoff, server-side idempotency, authoritative catalog/stock repricing, and Xendit payment redirection. Authenticated customers use their account email and do not need guest contact fields. A stock race returns the shopper to the cart with an actionable message. If Xendit cannot create a session, the order and reservation are retained and the shopper can retry payment on the same order. Shipping is calculated by the existing backend; selectable methods and pre-submit shipping quotes are not supported by the current contract.
 
 ### ✅ UI-06: Payment handoff and order result page
 
@@ -139,7 +139,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 **Implemented:** Xendit invoices now receive signed success/failure return URLs. The result page reads the current order/payment state from the database, so the redirect itself never marks an order paid. It explains pending, confirmed, expired, cancelled, shipped, completed, late-payment, and manual-refund states, shows the order snapshot and totals, and exposes payment continuation/retry only while the backend state allows it. Signed result links expire after three days.
 
-### UI-07: Guest order tracking
+### ✅ UI-07: Guest order tracking
 
 - Build a form for order ID and checkout email, call the existing tracking flow, and display order/payment state, items, shipment/tracking, and refund status.
 - Preserve the backend's privacy behavior: do not display address, phone, or other contact details in tracking results.
@@ -147,7 +147,9 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 **Done when:** matching guest credentials show the limited tracking details; mismatch, invalid input, and rate limiting produce usable messages without leaking personal data.
 
-### UI-08: Guest cancellation request and withdrawal
+**Implemented:** Added a guest lookup page reachable from the storefront header/footer, with an order ID and checkout email form. Web lookups share the existing tracking service and 10-per-minute IP limit. A matching order shows only order/payment status, item snapshots and totals, shipment/tracking information, and refund status; address and contact details remain hidden. Mismatched ID/email responses use the same generic message, and throttled requests receive a retry-later page.
+
+### ✅ UI-08: Guest cancellation request and withdrawal
 
 - From an eligible order view, submit a cancellation reason and exact guest email.
 - Show request status and allow withdrawal only while pending and undecided.
@@ -155,15 +157,19 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 **Done when:** eligible guests can submit and withdraw a pending request; duplicate, ineligible, decided, and mismatched-email cases show server errors clearly.
 
-### UI-09: Customer authentication and account foundation
+**Implemented:** Added a cancellation section to verified guest tracking results. Processing orders can submit a reason and the exact checkout email; a pending request displays its status and can be withdrawn with the same email. All changes call the existing `CancellationService`, so eligibility, duplicate-pending prevention, first-decision behavior, and audit events remain enforced server-side. Actions require a three-day signed link, a tracked-order session, CSRF protection, and guest-email matching. Paid-order cancellation messaging explains that refunds are manual.
 
-- Add customer registration/login/logout and password reset only if the project chooses to support account creation in this release.
+### ✅ UI-09: Customer authentication and account foundation
+
+- Add customer registration, login, and logout. Password reset can be deferred until email delivery is configured and selected for this release.
 - Keep customer and store-owner roles distinct; customer signup must never grant owner access.
 - Support secure session handling, CSRF protection, validation, and useful failure states.
 
-**Done when:** a customer can authenticate, end a session, and cannot access owner routes. If account creation is deferred, explicitly mark authenticated customer UI as deferred and keep guest purchase/tracking fully functional.
+**Done when:** a customer can register, authenticate, end a session, and cannot access owner routes. Guest purchase and tracking remain available.
 
-### UI-10: Customer order history and order details
+**Implemented:** Added throttled customer registration/login/logout and a customer-only account page. Registration forces the `customer` role server-side; customer login rejects owner accounts, session IDs are regenerated on authentication, and logout invalidates the session and CSRF token. Authenticated customers can check out using their account email while guest checkout remains available. Password reset is deferred until an email delivery workflow is selected and configured.
+
+### ✅ UI-10: Customer order history and order details
 
 - List only the signed-in customer's orders with status, date, total, and clear empty state.
 - Show item snapshots, payment/shipment/refund state, and cancellation request state on order detail.
@@ -171,7 +177,9 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 **Done when:** customers cannot access another customer's order by changing a URL; historical values come from order snapshots.
 
-### UI-11: Store-owner authentication and console shell
+**Implemented:** Added paginated, customer-scoped order history and detail pages. Details use saved item/address snapshots and show payment, shipment, refund, and cancellation states. Customer cancellation requests and withdrawals call the existing `CancellationService`; every read and mutation is scoped to the signed-in customer's order relationship.
+
+### ✅ UI-11: Store-owner authentication and console shell
 
 - Add/confirm a secure owner sign-in path and role-protected web middleware.
 - Build owner navigation, dashboard shell, breadcrumbs, responsive tables, confirmations, and consistent alerts.
@@ -179,7 +187,9 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 **Done when:** only an authenticated `store_owner` can reach owner pages; direct URL access as guest/customer is denied and redirects or shows a clear forbidden page.
 
-### UI-12: Owner order list, filters, and order detail
+**Implemented:** Added a separately throttled owner login/logout flow, a session-protected `/owner` console shell with owner-only middleware, responsive navigation, breadcrumbs, alert space, and reusable table/confirmation styles. There is no public owner registration. An optional environment-configured seeder creates an initial owner only when the credentials are explicitly set, refuses to promote an existing customer, and does not reset an existing owner's password.
+
+### ✅ UI-12: Owner order list, filters, and order detail
 
 - Show paginated orders with status, payment state, buyer type/contact summary appropriate to owner access, total, and date.
 - Filter by order/payment status and search by order ID/email where supported.
@@ -188,12 +198,16 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 **Done when:** owner can find an order, inspect its timeline and fulfillment state, and no store data is exposed through customer routes.
 
+**Implemented:** Added a paginated owner order list with filters for order/payment status and search by order ID or buyer email. Order details show saved item/address snapshots, buyer contact, totals, payment, shipment, latest cancellation/refund state, and up to 20 recent audit events without exposing raw audit payloads. Queries eager-load displayed relations and paginate results; all routes remain inside the authenticated `store_owner` web middleware group.
+
 ### UI-13: Cancellation review and owner-initiated cancellation
 
 - Provide a queue of pending cancellation requests and review detail with approve/reject controls.
 - Require a rejection reason when rejecting; require a reason for owner-initiated cancellation.
 - Confirm consequential actions and refresh displayed state after server response.
 - Explain manual refund follow-up for paid orders.
+
+**Implemented:** Added the owner cancellation queue, request review actions on order detail, required rejection and owner-cancellation reasons, confirmation prompts, and manual refund guidance for paid orders. Actions use `CancellationService`, so stale decisions and invalid order states return through the shared error display while persisted state and audit events remain server-controlled.
 
 **Done when:** owner actions follow backend status rules, duplicate decisions cannot appear successful, and changed request/order state is reflected in the UI.
 
@@ -204,6 +218,8 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 - Clearly distinguish “record refund completed” from sending money; require a confirmation before submission.
 - Display the persisted item selection and completion timestamp after success.
 
+**Implemented:** Added an owner order-detail form for recording a completed manual refund, selecting eligible order items for restocking, and adding transfer notes. Eligibility is derived from converted inventory reservations; the service revalidates the selected IDs and stock limits transactionally. Completed refund details show who recorded it, when, notes, and selected items.
+
 **Done when:** a completed refund is recorded once, only selected eligible items are restocked, and the UI does not imply an automated transfer occurred.
 
 ### UI-15: Manual shipment and delivery management
@@ -212,6 +228,8 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 - For shipped orders, allow an owner to confirm delivery.
 - Display current tracking and delivery status on customer and owner order views.
 - Clearly label shipment as manual; do not present carrier integration that is not implemented.
+
+**Implemented:** Added owner actions to record a manual tracking number and optional tracking URL for processing orders, and to confirm delivery for shipped, undelivered orders. Shipment state, timestamps, and tracking details appear on the order page; service validation and state transitions remain authoritative.
 
 **Done when:** server-approved order transitions are reflected and invalid/repeated shipment actions return clear feedback.
 
@@ -239,5 +257,5 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 3. **Accounts and operations:** UI-09 through UI-16 (customer history and store-owner console).
 4. **Release readiness:** UI-17 (end-to-end and accessibility review).
 
-The recommended next implementation task is **UI-07**, to build a guest order tracking form and display the limited order/shipping details returned by the existing tracking flow.
+The recommended next implementation task is **UI-16**, to finish the order audit activity view.
 

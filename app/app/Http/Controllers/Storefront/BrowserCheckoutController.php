@@ -17,8 +17,11 @@ use Illuminate\Validation\ValidationException;
 
 class BrowserCheckoutController extends Controller
 {
-    public function create()
+    public function create(Request $request)
     {
+        $customer = $request->user('web');
+        abort_if($customer && !$customer->isCustomer(), 403);
+
         $pendingOrder = $this->pendingOrder();
         if ($pendingOrder) {
             return $this->paymentUnavailable($pendingOrder);
@@ -63,6 +66,7 @@ class BrowserCheckoutController extends Controller
         return view('storefront.checkout.create', [
             'items' => $items,
             'subtotal' => $items->sum('line_total'),
+            'customer' => $customer,
         ]);
     }
 
@@ -77,9 +81,13 @@ class BrowserCheckoutController extends Controller
             return redirect()->route('storefront.cart.index')->withErrors(['cart' => 'Keranjang masih kosong.']);
         }
 
+        $customer = $request->user('web');
+        abort_if($customer && !$customer->isCustomer(), 403);
+        $isGuest = !$customer;
+
         $validated = Validator::make($request->all(), [
-            'guest_email' => ['required', 'email', 'max:255'],
-            'guest_phone' => ['required', 'string', 'max:30'],
+            'guest_email' => [$isGuest ? 'required' : 'nullable', 'email', 'max:255'],
+            'guest_phone' => [$isGuest ? 'required' : 'nullable', 'string', 'max:30'],
             'shipping_address.recipient_name' => ['required', 'string', 'max:255'],
             'shipping_address.phone' => ['required', 'string', 'max:30'],
             'shipping_address.address_line1' => ['required', 'string', 'max:255'],
@@ -109,7 +117,7 @@ class BrowserCheckoutController extends Controller
                     ...$validated['shipping_address'],
                     'country' => 'ID',
                 ],
-            ], $request->user());
+            ], $customer);
         } catch (InsufficientStockException $exception) {
             throw ValidationException::withMessages([
                 'cart' => 'Stok berubah sebelum pesanan dibuat. Perbarui keranjang lalu coba lagi.',

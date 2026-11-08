@@ -3,26 +3,21 @@
 namespace App\Http\Controllers\Storefront;
 
 use App\Http\Controllers\Controller;
-use App\Models\Order;
+use App\Services\GuestOrderTrackingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class GuestOrderTrackingController extends Controller
 {
-    public function __invoke(Request $request): JsonResponse
+    public function __invoke(Request $request, GuestOrderTrackingService $trackingService): JsonResponse
     {
         $data = $request->validate([
             'order_id' => ['required', 'string', 'size:26'],
             'email'    => ['required', 'email', 'max:255'],
         ]);
 
-        $order = Order::query()
-            ->whereKey($data['order_id'])
-            ->whereNull('customer_id')
-            ->with(['items', 'payment', 'shipment', 'refund'])
-            ->first();
-
-        if (!$order || strtolower(trim((string) $order->guest_email)) !== strtolower(trim($data['email']))) {
+        $order = $trackingService->find($data['order_id'], $data['email']);
+        if (!$order) {
             return response()->json(['message' => 'Order not found.'], 404);
         }
 
