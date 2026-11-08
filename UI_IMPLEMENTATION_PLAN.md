@@ -54,7 +54,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 | **UI-13** | Cancellation review and owner-initiated cancellation | UI-12 | ✅ Implemented |
 | **UI-14** | Manual refund recording and resellable item selection | UI-12 | ✅ Implemented |
 | **UI-15** | Manual shipment and delivery management | UI-12 | ✅ Implemented |
-| **UI-16** | Order audit activity view | UI-12 | 📋 Pending |
+| **UI-16** | Order audit activity view | UI-12 | ✅ Implemented |
 | **UI-17** | End-to-end UI verification, accessibility, and polish | UI-03–UI-16 | 📋 Pending |
 
 ## Detailed tasks and completion criteria
@@ -238,6 +238,8 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 - Display the order's audit events in chronological order with human-readable labels, actor, time, and safe metadata.
 - Avoid rendering secrets or unnecessary personal/payment data from payloads.
 
+**Implemented:** Expanded the owner order timeline with readable event names, localized actor labels, and allowlisted summaries for safe operational details such as order totals, item counts, and tracking method. Payment identifiers, invoice URLs, raw callback payloads, and internal record IDs are omitted. The latest 20 events are displayed oldest-to-newest, with an indicator when older history exists.
+
 **Done when:** owners can understand important payment, inventory, cancellation, refund, and fulfillment events without exposing sensitive callback contents.
 
 ### UI-17: End-to-end UI verification, accessibility, and polish
@@ -257,5 +259,5 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 3. **Accounts and operations:** UI-09 through UI-16 (customer history and store-owner console).
 4. **Release readiness:** UI-17 (end-to-end and accessibility review).
 
-The recommended next implementation task is **UI-16**, to finish the order audit activity view.
+The recommended next implementation task is **UI-17**, for end-to-end UI verification, accessibility, and polish.
 

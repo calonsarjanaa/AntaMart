@@ -403,6 +403,7 @@ button, input, textarea, select { font: inherit; }
 .owner-activity-list li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #eef0f3; }
 .owner-activity-list li:last-child { border-bottom: 0; }
 .owner-activity-list li > div { display: grid; gap: 4px; }
+.owner-activity-list li > div small:last-child:not(:first-child) { overflow-wrap: anywhere; }
 .owner-activity-list strong { color: #344054; font-size: 10px; }
 .owner-activity-list small, .owner-activity-list time { color: #7b8494; font-size: 9px; }
 .owner-activity-note { display: block; margin-top: 7px; color: #98a2b3; font-size: 9px; }

@@ -197,13 +197,17 @@
                         <ol class="owner-activity-list">
                             @foreach ($auditLogs as $log)
                                 <li>
-                                    <div><strong>{{ \Illuminate\Support\Str::headline(str_replace('.', ' ', $log->event)) }}</strong><small>{{ $log->actor?->name ?? \Illuminate\Support\Str::headline($log->actor_type ?? 'system') }}</small></div>
+                                    <div>
+                                        <strong>{{ $log->display_event }}</strong>
+                                        <small>{{ $log->display_actor }}</small>
+                                        @if ($log->display_summary)<small>{{ $log->display_summary }}</small>@endif
+                                    </div>
                                     <time datetime="{{ $log->created_at?->toIso8601String() }}">{{ $log->created_at?->timezone(config('app.timezone'))->format('d M Y, H:i') }}</time>
                                 </li>
                             @endforeach
                         </ol>
                     @endif
-                    @if ($auditLogs->count() === 20)<small class="owner-activity-note">Menampilkan 20 aktivitas terbaru.</small>@endif
+                    @if ($hasMoreAuditLogs)<small class="owner-activity-note">Menampilkan 20 aktivitas terbaru.</small>@endif
                 </section>
             </div>
 
