@@ -45,7 +45,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 | **UI-04** | Shopping cart | UI-02, UI-03 | ✅ Implemented |
 | **UI-05** | Guest and customer checkout | UI-01, UI-04 | ✅ Implemented |
 | **UI-06** | Payment handoff and order result page | UI-05 | ✅ Implemented |
-| **UI-07** | Guest order tracking | UI-00, UI-02 | 📋 Pending |
+| **UI-07** | Guest order tracking | UI-00, UI-02 | ✅ Implemented |
 | **UI-08** | Guest cancellation request and withdrawal | UI-07 | 📋 Pending |
 | **UI-09** | Customer authentication and account foundation | UI-00 | 📋 Pending |
 | **UI-10** | Customer order history and order details | UI-09, UI-06 | 📋 Pending |
@@ -139,13 +139,15 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 **Implemented:** Xendit invoices now receive signed success/failure return URLs. The result page reads the current order/payment state from the database, so the redirect itself never marks an order paid. It explains pending, confirmed, expired, cancelled, shipped, completed, late-payment, and manual-refund states, shows the order snapshot and totals, and exposes payment continuation/retry only while the backend state allows it. Signed result links expire after three days.
 
-### UI-07: Guest order tracking
+### ✅ UI-07: Guest order tracking
 
 - Build a form for order ID and checkout email, call the existing tracking flow, and display order/payment state, items, shipment/tracking, and refund status.
 - Preserve the backend's privacy behavior: do not display address, phone, or other contact details in tracking results.
 - Handle not-found/mismatch uniformly and explain rate limiting without revealing whether an order ID exists.
 
 **Done when:** matching guest credentials show the limited tracking details; mismatch, invalid input, and rate limiting produce usable messages without leaking personal data.
+
+**Implemented:** Added a guest lookup page reachable from the storefront header/footer, with an order ID and checkout email form. Web lookups share the existing tracking service and 10-per-minute IP limit. A matching order shows only order/payment status, item snapshots and totals, shipment/tracking information, and refund status; address and contact details remain hidden. Mismatched ID/email responses use the same generic message, and throttled requests receive a retry-later page.
 
 ### UI-08: Guest cancellation request and withdrawal
 
@@ -239,5 +241,5 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 3. **Accounts and operations:** UI-09 through UI-16 (customer history and store-owner console).
 4. **Release readiness:** UI-17 (end-to-end and accessibility review).
 
-The recommended next implementation task is **UI-07**, to build a guest order tracking form and display the limited order/shipping details returned by the existing tracking flow.
+The recommended next implementation task is **UI-08**, to add guest cancellation request and withdrawal actions to eligible tracked orders.
 

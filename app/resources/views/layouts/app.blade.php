@@ -23,6 +23,7 @@
                 <input id="site-search" type="search" name="q" value="{{ request('q') }}" placeholder="Cari barang kebutuhanmu di sini...">
             </form>
             <div class="header-actions">
+                <a class="tracking-nav-link" href="{{ route('storefront.orders.track') }}">Lacak pesanan</a>
                 <a class="bag-link" href="{{ route('storefront.cart.index') }}" aria-label="Keranjang, {{ array_sum(session('cart', [])) }} item">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
                         <path d="M5 8.5h14l1 12H4l1-12Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
@@ -49,6 +50,7 @@
                 <span class="wordmark-mark" aria-hidden="true">A</span>
                 <span>AntaMart</span>
             </a>
+            <a class="footer-track-link" href="{{ route('storefront.orders.track') }}">Lacak pesanan</a>
             <p>Belanja kebutuhan sehari-hari.</p>
             <span class="footer-copyright">© {{ now()->year }} AntaMart</span>
         </div>

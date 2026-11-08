@@ -129,6 +129,8 @@ button, input, textarea, select { font: inherit; }
 .footer-wordmark { font-size: 12px; }
 .footer-wordmark .wordmark-mark { width: 19px; height: 19px; border-radius: 5px; font-size: 11px; }
 .footer-inner > p, .footer-copyright { margin: 0; color: #7b8494; font-size: 9px; }
+.footer-track-link { color: #475467; font-size: 9px; font-weight: 600; }
+.footer-track-link:hover { color: var(--blue); }
 
 .alert { width: min(var(--content-width), calc(100% - 32px)); margin: 12px auto; padding: 10px 14px; border: 1px solid #dfe3ea; border-radius: 6px; color: #475467; background: #fff; font-size: 11px; }
 .alert p:last-child, .alert ul:last-child { margin-bottom: 0; }
@@ -240,6 +242,36 @@ button, input, textarea, select { font: inherit; }
 .order-result-meta > div { display: grid; gap: 4px; color: #344054; font-size: 10px; overflow-wrap: anywhere; }
 .order-result-meta > div > span:first-child { color: #7b8494; font-size: 9px; }
 .order-result-meta .text-link { color: var(--blue); }
+.tracking-nav-link { color: #475467; font-size: 10px; font-weight: 600; white-space: nowrap; }
+.tracking-nav-link:hover { color: var(--blue); }
+.tracking-page { min-height: 55vh; margin: 24px auto 48px; }
+.tracking-page > .section-heading h1 { margin: 0; color: #273244; font-size: 21px; font-weight: 750; letter-spacing: -.03em; }
+.tracking-layout { display: grid; grid-template-columns: minmax(260px, .72fr) minmax(0, 1.4fr); align-items: start; gap: 15px; }
+.tracking-form-panel { position: sticky; top: 12px; }
+.tracking-form-panel h2, .tracking-items-panel h2, .tracking-shipment-panel h2 { margin: 0 0 8px; color: #344054; font-size: 13px; }
+.tracking-form-panel > p, .tracking-form-panel > small { color: #7b8494; font-size: 10px; line-height: 1.55; }
+.tracking-form-panel form { display: grid; gap: 12px; margin-top: 15px; }
+.tracking-form-panel form .button { width: 100%; min-height: 38px; border-radius: 5px; }
+.tracking-form-panel > small { display: block; margin-top: 12px; font-size: 9px; }
+.tracking-lookup-error { margin: -5px 0 0; }
+.tracking-result { display: grid; min-width: 0; gap: 13px; }
+.tracking-order-panel { min-width: 0; }
+.tracking-result-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.tracking-result-heading h2 { margin: 0 0 12px; color: #344054; font-size: 14px; }
+.tracking-result-heading > a { color: var(--blue); font-size: 9px; font-weight: 650; white-space: nowrap; }
+.tracking-statuses { display: flex; flex-wrap: wrap; gap: 12px; }
+.tracking-statuses > span { display: inline-flex; align-items: center; gap: 6px; color: #667085; font-size: 9px; }
+.tracking-status-copy { margin: 12px 0; color: #667085; font-size: 10px; line-height: 1.55; }
+.tracking-alert { width: 100%; margin: 10px 0; font-size: 10px; }
+.tracking-totals { margin-top: 14px; padding-top: 5px; border-top: 1px solid #eef0f3; }
+.tracking-totals > div { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; color: #344054; font-size: 10px; }
+.tracking-totals > div > span { color: #7b8494; }
+.tracking-totals > div:last-child { border-top: 1px solid #eef0f3; font-size: 11px; }
+.tracking-items-panel .order-result-item { padding: 9px 0; }
+.tracking-shipment-panel > p { margin: 0 0 10px; color: #667085; font-size: 10px; }
+.tracking-shipment-panel > div { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; color: #344054; font-size: 10px; }
+.tracking-shipment-panel > div > span { color: #7b8494; }
+.tracking-shipment-panel .text-link { display: inline-block; margin-top: 8px; color: var(--blue); font-size: 10px; }
 .add-to-cart-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 11px; margin-top: 17px; }
 .quantity-field { display: flex; flex-direction: column; gap: 5px; color: #475467; font-size: 10px; font-weight: 600; }
 .quantity-field input { width: 76px; height: 36px; padding: 0 8px; border: 1px solid #d0d5dd; border-radius: 5px; color: var(--ink); font-size: 11px; }
@@ -313,6 +345,9 @@ button, input, textarea, select { font: inherit; }
     .checkout-fields .form-field:nth-child(n) { grid-column: auto; }
     .checkout-result-panel { margin: 24px auto; padding: 19px; }
     .order-result-layout { grid-template-columns: 1fr; }
+    .tracking-nav-link { display: none; }
+    .tracking-layout { grid-template-columns: 1fr; }
+    .tracking-form-panel { position: static; }
 }
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
