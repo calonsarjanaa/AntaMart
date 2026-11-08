@@ -53,7 +53,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 | **UI-12** | Owner order list, filters, and order detail | UI-11 | ✅ Implemented |
 | **UI-13** | Cancellation review and owner-initiated cancellation | UI-12 | ✅ Implemented |
 | **UI-14** | Manual refund recording and resellable item selection | UI-12 | ✅ Implemented |
-| **UI-15** | Manual shipment and delivery management | UI-12 | 📋 Pending |
+| **UI-15** | Manual shipment and delivery management | UI-12 | ✅ Implemented |
 | **UI-16** | Order audit activity view | UI-12 | 📋 Pending |
 | **UI-17** | End-to-end UI verification, accessibility, and polish | UI-03–UI-16 | 📋 Pending |
 
@@ -229,6 +229,8 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 - Display current tracking and delivery status on customer and owner order views.
 - Clearly label shipment as manual; do not present carrier integration that is not implemented.
 
+**Implemented:** Added owner actions to record a manual tracking number and optional tracking URL for processing orders, and to confirm delivery for shipped, undelivered orders. Shipment state, timestamps, and tracking details appear on the order page; service validation and state transitions remain authoritative.
+
 **Done when:** server-approved order transitions are reflected and invalid/repeated shipment actions return clear feedback.
 
 ### UI-16: Order audit activity view
@@ -255,5 +257,5 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 3. **Accounts and operations:** UI-09 through UI-16 (customer history and store-owner console).
 4. **Release readiness:** UI-17 (end-to-end and accessibility review).
 
-The recommended next implementation task is **UI-15**, to add manual shipment and delivery management.
+The recommended next implementation task is **UI-16**, to finish the order audit activity view.
 

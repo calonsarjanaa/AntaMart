@@ -65,8 +65,24 @@
                                 @if ($order->shipment->tracking_url)<a href="{{ $order->shipment->tracking_url }}" target="_blank" rel="noopener noreferrer">Buka tautan pelacakan</a>@endif
                                 @if ($order->shipment->shipped_at)<small>Dikirim {{ $order->shipment->shipped_at->timezone(config('app.timezone'))->format('d M Y, H:i') }}</small>@endif
                                 @if ($order->shipment->delivered_at)<small>Diterima {{ $order->shipment->delivered_at->timezone(config('app.timezone'))->format('d M Y, H:i') }}</small>@endif
+                                @if ($order->status->value === 'shipped' && !$order->shipment->delivered_at)
+                                    <form class="owner-shipment-action" method="post" action="{{ route('owner.orders.delivery.confirm', $order->id) }}" onsubmit="return confirm('Tandai pesanan ini telah diterima? Status akan berubah menjadi selesai.');">
+                                        @csrf
+                                        <button class="button" type="submit">Tandai telah diterima</button>
+                                    </form>
+                                @endif
                             @else
                                 <span class="owner-muted">Belum dikirim</span>
+                                @if ($order->status->value === 'processing')
+                                    <form class="owner-shipment-action" method="post" action="{{ route('owner.orders.shipment.store', $order->id) }}" onsubmit="return confirm('Simpan resi dan tandai pesanan telah dikirim?');">
+                                        @csrf
+                                        <label class="field-label" for="tracking-number">Nomor resi <span class="required-mark" aria-hidden="true">*</span></label>
+                                        <input id="tracking-number" name="tracking_number" type="text" maxlength="255" value="{{ old('tracking_number') }}" required>
+                                        <label class="field-label" for="tracking-url">Tautan pelacakan <span>(opsional)</span></label>
+                                        <input id="tracking-url" name="tracking_url" type="url" maxlength="2048" value="{{ old('tracking_url') }}" placeholder="https://">
+                                        <button class="button" type="submit">Catat pengiriman</button>
+                                    </form>
+                                @endif
                             @endif
                         </div>
                     </div>

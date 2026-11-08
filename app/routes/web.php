@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\OwnerAuthController;
 use App\Http\Controllers\Admin\OwnerOrderController;
 use App\Http\Controllers\Admin\OwnerCancellationController;
 use App\Http\Controllers\Admin\OwnerRefundController;
+use App\Http\Controllers\Admin\OwnerShipmentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -73,5 +74,7 @@ Route::middleware(['auth:web', 'role:store_owner'])->prefix('/owner')->name('own
     Route::post('/orders/{orderId}/cancellation-requests/{requestId}/review', [OwnerCancellationController::class, 'review'])->name('orders.cancellations.review');
     Route::post('/orders/{orderId}/cancel', [OwnerCancellationController::class, 'cancelOrder'])->name('orders.cancel');
     Route::post('/orders/{orderId}/refund/mark-refunded', [OwnerRefundController::class, 'markRefunded'])->name('orders.refund.mark-refunded');
+    Route::post('/orders/{orderId}/shipment', [OwnerShipmentController::class, 'store'])->name('orders.shipment.store');
+    Route::post('/orders/{orderId}/delivery/confirm', [OwnerShipmentController::class, 'confirmDelivery'])->name('orders.delivery.confirm');
     Route::post('/logout', [OwnerAuthController::class, 'logout'])->name('logout');
 });
