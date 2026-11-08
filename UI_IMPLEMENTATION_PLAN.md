@@ -48,7 +48,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 | **UI-07** | Guest order tracking | UI-00, UI-02 | ✅ Implemented |
 | **UI-08** | Guest cancellation request and withdrawal | UI-07 | ✅ Implemented |
 | **UI-09** | Customer authentication and account foundation | UI-00 | ✅ Implemented |
-| **UI-10** | Customer order history and order details | UI-09, UI-06 | 📋 Pending |
+| **UI-10** | Customer order history and order details | UI-09, UI-06 | ✅ Implemented |
 | **UI-11** | Store-owner authentication and console shell | UI-00 | 📋 Pending |
 | **UI-12** | Owner order list, filters, and order detail | UI-11 | 📋 Pending |
 | **UI-13** | Cancellation review and owner-initiated cancellation | UI-12 | 📋 Pending |
@@ -169,13 +169,15 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 **Implemented:** Added throttled customer registration/login/logout and a customer-only account page. Registration forces the `customer` role server-side; customer login rejects owner accounts, session IDs are regenerated on authentication, and logout invalidates the session and CSRF token. Authenticated customers can check out using their account email while guest checkout remains available. Password reset is deferred until an email delivery workflow is selected and configured.
 
-### UI-10: Customer order history and order details
+### ✅ UI-10: Customer order history and order details
 
 - List only the signed-in customer's orders with status, date, total, and clear empty state.
 - Show item snapshots, payment/shipment/refund state, and cancellation request state on order detail.
 - Permit allowed cancellation request/withdraw actions using the existing business rules.
 
 **Done when:** customers cannot access another customer's order by changing a URL; historical values come from order snapshots.
+
+**Implemented:** Added paginated, customer-scoped order history and detail pages. Details use saved item/address snapshots and show payment, shipment, refund, and cancellation states. Customer cancellation requests and withdrawals call the existing `CancellationService`; every read and mutation is scoped to the signed-in customer's order relationship.
 
 ### UI-11: Store-owner authentication and console shell
 
@@ -245,5 +247,5 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 3. **Accounts and operations:** UI-09 through UI-16 (customer history and store-owner console).
 4. **Release readiness:** UI-17 (end-to-end and accessibility review).
 
-The recommended next implementation task is **UI-10**, to add customer order history and order details with customer ownership checks.
+The recommended next implementation task is **UI-11**, to add store-owner authentication and the protected console shell.
 

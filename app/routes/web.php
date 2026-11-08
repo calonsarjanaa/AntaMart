@@ -7,6 +7,7 @@ use App\Http\Controllers\Storefront\BrowserCheckoutController;
 use App\Http\Controllers\Storefront\BrowserGuestOrderTrackingController;
 use App\Http\Controllers\Storefront\BrowserGuestCancellationController;
 use App\Http\Controllers\Storefront\CustomerAuthController;
+use App\Http\Controllers\Storefront\CustomerOrderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -49,6 +50,10 @@ Route::middleware('guest:web')->group(function () {
 Route::middleware(['auth:web', 'role:customer'])->prefix('/account')->name('storefront.account.')->group(function () {
     Route::get('/', [CustomerAuthController::class, 'account'])->name('index');
     Route::post('/logout', [CustomerAuthController::class, 'logout'])->name('logout');
+    Route::get('/orders', [CustomerOrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{orderId}', [CustomerOrderController::class, 'show'])->name('orders.show');
+    Route::post('/orders/{orderId}/cancellation-requests', [CustomerOrderController::class, 'requestCancellation'])->name('orders.cancellation.store');
+    Route::post('/orders/{orderId}/cancellation-requests/{requestId}/withdraw', [CustomerOrderController::class, 'withdrawCancellation'])->name('orders.cancellation.withdraw');
 });
 
 Route::view('/owner', 'owner.index')

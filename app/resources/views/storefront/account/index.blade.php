@@ -15,10 +15,11 @@
                 <small>Akun dibuat {{ $user->created_at?->timezone(config('app.timezone'))->format('d M Y') }}</small>
             </div>
             <div class="account-actions">
-                <a class="button button-secondary" href="{{ route('storefront.home') }}">Lanjut belanja</a>
+                <a class="button button-secondary" href="{{ route('storefront.account.orders.index') }}">Riwayat pesanan</a>
+                <a class="button button-primary" href="{{ route('storefront.home') }}">Lanjut belanja</a>
                 <form method="post" action="{{ route('storefront.account.logout') }}">
                     @csrf
-                    <button class="button button-primary" type="submit">Keluar</button>
+                    <button class="button button-secondary" type="submit">Keluar</button>
                 </form>
             </div>
         </div>
