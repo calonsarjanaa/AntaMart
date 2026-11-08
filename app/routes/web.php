@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Storefront\StorefrontController;
 use App\Http\Controllers\Storefront\CartController;
+use App\Http\Controllers\Storefront\BrowserCheckoutController;
 
 /*
 |--------------------------------------------------------------------------
@@ -21,6 +22,9 @@ Route::get('/cart', [CartController::class, 'index'])->name('storefront.cart.ind
 Route::post('/cart/items', [CartController::class, 'store'])->name('storefront.cart.items.store');
 Route::patch('/cart/items/{variantId}', [CartController::class, 'update'])->name('storefront.cart.items.update');
 Route::delete('/cart/items/{variantId}', [CartController::class, 'destroy'])->name('storefront.cart.items.destroy');
+Route::get('/checkout', [BrowserCheckoutController::class, 'create'])->name('storefront.checkout.create');
+Route::post('/checkout', [BrowserCheckoutController::class, 'store'])->name('storefront.checkout.store');
+Route::post('/checkout/payment/retry', [BrowserCheckoutController::class, 'retryPayment'])->name('storefront.checkout.payment.retry');
 
 Route::view('/owner', 'owner.index')
     ->middleware('role:store_owner')

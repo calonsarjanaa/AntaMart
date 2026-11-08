@@ -43,7 +43,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 | **UI-02** | Storefront shell and responsive design system | UI-00 | ✅ Implemented |
 | **UI-03** | Product listing, detail, and stock states | UI-01, UI-02 | ✅ Implemented |
 | **UI-04** | Shopping cart | UI-02, UI-03 | ✅ Implemented |
-| **UI-05** | Guest and customer checkout | UI-01, UI-04 | 📋 Pending |
+| **UI-05** | Guest and customer checkout | UI-01, UI-04 | ✅ Implemented |
 | **UI-06** | Payment handoff and order result page | UI-05 | 📋 Pending |
 | **UI-07** | Guest order tracking | UI-00, UI-02 | 📋 Pending |
 | **UI-08** | Guest cancellation request and withdrawal | UI-07 | 📋 Pending |
@@ -115,15 +115,18 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 **Implemented:** Added session-backed add, update, and remove actions with server-side stock checks, a cart page with current item prices and subtotal, and an item count in the header. Inactive or unavailable items remain removable; the final checkout handoff is left for UI-05.
 
-### UI-05: Guest and customer checkout
+### ✅ UI-05: Guest and customer checkout
 
-- Collect guest email and phone, required recipient/address fields, and supported shipping method data.
-- Support authenticated customers where customer authentication exists; keep guest checkout available.
-- Submit an idempotency key and selected variant IDs/quantities to the server.
+- Collect guest email/phone and required recipient/address fields. No shipping-method control is shown because the current backend calculates shipping without accepting or persisting a method.
+- Keep guest checkout available; customer accounts are deferred to UI-09.
+- Submit the session cart's variant IDs and quantities with a server-generated idempotency key; the browser cannot override cart prices or quantities.
 - Display field-level validation errors and stock conflicts while preserving safe form input.
-- Show server-calculated subtotal, shipping, and total before submission when the backend can provide an authoritative quote.
+- Show the current database-priced subtotal and explain that the backend calculates shipping and the final total from the submitted address.
+- Redirect to the payment URL when available; if payment-session creation fails, preserve the order and offer a retry for that same order.
 
 **Done when:** valid guest checkout creates one order despite repeated submission; invalid address, unavailable stock, and gateway failure are explained without losing the user's next step.
+
+**Implemented:** Added a responsive guest checkout form, session-cart handoff, server-side idempotency, authoritative catalog/stock repricing, and Xendit payment redirection. A stock race returns the shopper to the cart with an actionable message. If Xendit cannot create a session, the order and reservation are retained and the shopper can retry payment on the same order. Shipping is calculated by the existing backend; selectable methods and pre-submit shipping quotes are not supported by the current contract.
 
 ### UI-06: Payment handoff and order result page
 
@@ -234,5 +237,5 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 3. **Accounts and operations:** UI-09 through UI-16 (customer history and store-owner console).
 4. **Release readiness:** UI-17 (end-to-end and accessibility review).
 
-The recommended next implementation task is **UI-02**, to finish the shared responsive design system, followed by **UI-03** to build product listing/detail pages on top of the catalog read path.
+The recommended next implementation task is **UI-06**, to add payment return/result states and display webhook-confirmed order/payment status.
 

@@ -85,8 +85,12 @@
                     @if ($hasUnavailableItems)
                         <x-alert tone="warning" class="summary-warning">Perbarui atau hapus produk yang stoknya berubah sebelum melanjutkan.</x-alert>
                     @endif
-                    <button class="button button-disabled checkout-placeholder" type="button" disabled>Lanjut ke checkout</button>
-                    <small>Checkout tersedia pada langkah berikutnya.</small>
+                    @if ($hasUnavailableItems)
+                        <button class="button button-disabled" type="button" disabled>Lanjut ke checkout</button>
+                        <small>Perbarui keranjang untuk melanjutkan.</small>
+                    @else
+                        <a class="button button-primary" href="{{ route('storefront.checkout.create') }}">Lanjut ke checkout</a>
+                    @endif
                     <a class="continue-shopping" href="{{ route('storefront.home') }}#products">← Lanjut belanja</a>
                 </aside>
             </div>

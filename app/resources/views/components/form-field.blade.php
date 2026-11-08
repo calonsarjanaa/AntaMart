@@ -1,20 +1,25 @@
 @props(['name', 'label', 'type' => 'text', 'required' => false, 'value' => null])
 
+@php
+    $errorKey = trim(str_replace(['[', ']'], ['.', ''], $name), '.');
+    $fieldId = str_replace(['[', ']'], ['_', ''], $name);
+@endphp
+
 <div class="form-field">
-    <label class="field-label" for="{{ $name }}">
+    <label class="field-label" for="{{ $fieldId }}">
         {{ $label }}
         @if ($required)<span class="required-mark" aria-hidden="true">*</span>@endif
     </label>
     <input
-        id="{{ $name }}"
+        id="{{ $fieldId }}"
         name="{{ $name }}"
         type="{{ $type }}"
-        value="{{ old($name, $value) }}"
+        value="{{ old($errorKey, $value) }}"
         @required($required)
-        @if ($errors->has($name)) aria-invalid="true" aria-describedby="{{ $name }}-error" @endif
-        {{ $attributes->class(['field-input', 'field-input-invalid' => $errors->has($name)]) }}
+        @if ($errors->has($errorKey)) aria-invalid="true" aria-describedby="{{ $fieldId }}-error" @endif
+        {{ $attributes->class(['field-input', 'field-input-invalid' => $errors->has($errorKey)]) }}
     >
-    @error($name)
-        <p class="field-error" id="{{ $name }}-error">{{ $message }}</p>
+    @error($errorKey)
+        <p class="field-error" id="{{ $fieldId }}-error">{{ $message }}</p>
     @enderror
 </div>
