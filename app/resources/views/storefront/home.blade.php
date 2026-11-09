@@ -41,15 +41,26 @@
 
     <section class="catalog-section" id="products" aria-labelledby="catalog-title">
         <div class="section-heading">
-            <div><p class="section-eyebrow">ANTAMART</p><h2 id="catalog-title">Produk</h2></div>
+            <div><p class="section-eyebrow">ANTAMART</p><h2 id="catalog-title">{{ $selectedCategory?->name ?? 'Produk' }}</h2></div>
             <span class="result-count">{{ $products->total() }} produk</span>
         </div>
 
         <nav class="filter-chips" aria-label="Filter ketersediaan produk">
             @foreach (['all' => 'Semua', 'in-stock' => 'Tersedia', 'sold-out' => 'Habis'] as $filter => $label)
                 <a class="filter-chip {{ $availability === $filter ? 'is-active' : '' }}"
-                   href="{{ route('storefront.home', array_filter(['q' => $search, 'availability' => $filter === 'all' ? null : $filter])) }}"
+                   href="{{ route('storefront.home', array_filter(['q' => $search, 'availability' => $filter === 'all' ? null : $filter, 'category' => $categoryFilter ?: null])) }}"
                    @if ($availability === $filter) aria-current="page" @endif>{{ $label }}</a>
+            @endforeach
+        </nav>
+
+        <nav class="filter-chips category-filter-chips" aria-label="Filter kategori produk">
+            <a class="filter-chip {{ $categoryFilter === '' ? 'is-active' : '' }}"
+               href="{{ route('storefront.home', array_filter(['q' => $search, 'availability' => $availability === 'all' ? null : $availability])) }}"
+               @if ($categoryFilter === '') aria-current="page" @endif>Semua kategori</a>
+            @foreach ($categories as $category)
+                <a class="filter-chip {{ $categoryFilter === $category->slug ? 'is-active' : '' }}"
+                   href="{{ route('storefront.home', array_filter(['q' => $search, 'availability' => $availability === 'all' ? null : $availability, 'category' => $category->slug])) }}"
+                   @if ($categoryFilter === $category->slug) aria-current="page" @endif>{{ $category->name }}</a>
             @endforeach
         </nav>
 
@@ -78,8 +89,8 @@
         @else
             <x-empty-state
                 class="catalog-empty"
-                :title="$search ? 'Produk tidak ditemukan' : 'Belum ada produk untuk ditampilkan'"
-                :description="$search ? 'Coba kata pencarian lain.' : 'Silakan kembali lagi nanti.'"
+                :title="$search ? 'Produk tidak ditemukan' : ($selectedCategory ? 'Belum ada produk di kategori ini' : 'Belum ada produk untuk ditampilkan')"
+                :description="$search ? 'Coba kata pencarian lain.' : ($selectedCategory ? 'Belum ada produk aktif di kategori ini.' : 'Silakan kembali lagi nanti.')"
             />
         @endif
     </section>

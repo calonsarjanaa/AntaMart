@@ -21,6 +21,10 @@
                 <label class="visually-hidden" for="site-search">Cari produk</label>
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><circle cx="10.8" cy="10.8" r="6.8" stroke="currentColor" stroke-width="1.6"/><path d="m16 16 4.2 4.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
                 <input id="site-search" type="search" name="q" value="{{ request('q') }}" placeholder="Cari barang kebutuhanmu di sini...">
+                @if (request()->routeIs('storefront.home'))
+                    @if (request('category'))<input type="hidden" name="category" value="{{ request('category') }}">@endif
+                    @if (request('availability'))<input type="hidden" name="availability" value="{{ request('availability') }}">@endif
+                @endif
             </form>
             <div class="header-actions">
                 <a class="tracking-nav-link" href="{{ route('storefront.orders.track') }}">Lacak pesanan</a>

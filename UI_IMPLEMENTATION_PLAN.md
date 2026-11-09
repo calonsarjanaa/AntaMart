@@ -11,7 +11,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 - The Laravel 10 application has Vite, a default Laravel welcome page, and no customer or owner screens.
 - `routes/web.php` serves only `/`; transaction routes are JSON endpoints under `/api`.
 - Existing backend flows cover checkout, payment-session retry, guest tracking, cancellation, manual refunds, shipments, and audit logging.
-- There is no product catalog endpoint or complete product entity. `product_variants` currently contains `product_id`, `name`, SKU, price, stock, and active status, but no product table, description, category, or image.
+- The product catalog, category taxonomy, storefront, and owner console are implemented over the existing inventory-backed product variants.
 - Sanctum protects owner API routes, but the app has no login, logout, registration, or owner account screens.
 - The UI must treat the webhook-updated order state as authoritative. A redirect from the payment provider alone does not prove payment.
 
@@ -28,7 +28,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 - Build a guest-first storefront and a role-protected store-owner console.
 - Add customer accounts and order history because they are listed in the PRD, but keep guest checkout and guest tracking usable without signing in.
-- Store owners manage orders, cancellations, refunds, and shipments. Product authoring and inventory editing are outside the current PRD and are not included here.
+- Store owners manage the catalog, inventory, orders, cancellations, refunds, and shipments.
 - Product catalog work will add the minimum product data needed for real browseable product pages while preserving existing order snapshots and variant stock behavior.
 - Shipping remains manual. The UI must show the shipping amount returned/calculated by the server and must not imply carrier quoting or automated label creation.
 - Refund execution remains external/manual. The owner console records completion and the resellable item selection; it does not initiate a bank transfer or gateway refund.
@@ -56,6 +56,8 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 | **UI-15** | Manual shipment and delivery management | UI-12 | ✅ Implemented |
 | **UI-16** | Order audit activity view | UI-12 | ✅ Implemented |
 | **UI-17** | End-to-end UI verification, accessibility, and polish | UI-03–UI-16 | ✅ Implemented |
+| **UI-18** | Owner product and inventory management | UI-01, UI-11 | ✅ Implemented |
+| **UI-19** | Product categories and homepage filtering | UI-18 | ✅ Implemented |
 
 ## Detailed tasks and completion criteria
 
@@ -102,7 +104,7 @@ The UI will be delivered in small, reviewable tasks. Each implementation task sh
 
 **Done when:** a customer can find a seeded product, open its detail page, and see variant price and stock state. Cart and quantity selection are handled in UI-04.
 
-**Implemented:** Added server-rendered product listing and detail routes using active catalog records. Product name/description search and stock-availability filters use existing fields. Product cards show price and stock state without ratings or promotional claims; missing images use a neutral placeholder. Category filters are omitted because the current catalog has no category data.
+**Implemented:** Added server-rendered product listing and detail routes using active catalog records. Product name/description search and stock-availability filters use existing fields. Product cards show price and stock state without ratings or promotional claims; missing images use a neutral placeholder. Category filtering and management were added later in UI-19.
 
 ### UI-04: Shopping cart
 
@@ -265,7 +267,32 @@ COD results instead show processing and the amount due at delivery; no Xendit se
 1. **Shopper foundation:** UI-00 through UI-06 (catalog, cart, checkout, payment handoff).
 2. **Guest service:** UI-07 and UI-08 (tracking and cancellation).
 3. **Accounts and operations:** UI-09 through UI-16 (customer history and store-owner console).
-4. **Release readiness:** UI-17 (end-to-end and accessibility review).
+4. **Catalog operations:** UI-18 and UI-19 (owner product/inventory management and category filtering).
+5. **Release readiness:** UI-17 (end-to-end and accessibility review).
 
-UI-00 through UI-17 are implemented. Complete the remaining manual release checks listed under UI-17 before release.
+UI-00 through UI-19 are implemented. Complete the remaining manual release checks listed under UI-17 before release.
+
+### ✅ UI-18: Owner product and inventory management
+
+- Add a role-protected catalog in the owner console with product search and active/archive status.
+- Allow owners to create a product with its first inventory-backed variant, upload a product image, and edit product details.
+- Allow owners to add variants and update SKU, price, active status, and physical stock.
+- Preserve historical order references by archiving products and variants instead of deleting them.
+- Reject stock changes below reserved quantities and record inventory adjustments in the audit log.
+- Keep the controls responsive and compatible with the existing product and variant data model.
+
+**Implemented:** Added owner catalog routes and pages for product creation/editing, image uploads, variant management, price and stock updates, and product/variant archiving. Inventory changes cannot drop below reserved stock and are logged as standalone audit events. The owner layout now links to the catalog.
+
+**Done when:** a store owner can manage products and sellable variants from the console while existing orders retain their product snapshots and reserved inventory remains valid.
+
+### ✅ UI-19: Product categories and homepage filtering
+
+- Add the fixed product categories: Kebutuhan Pokok, Makanan Ringan, Minuman, Obat-obatan, Alat Kebersihan, Alat Mandi, Alat Tulis dan Sekolah, and Perawatan Diri.
+- Let owners assign a category when creating or editing products and display categories in the owner catalog.
+- Add homepage category filters that combine with product search and stock availability filters.
+- Keep existing products intact and allow owners to assign their categories without guessing from product names.
+
+**Implemented:** Added the category table and initial category records, owner category selection, and homepage filters that preserve other active filters. Existing product rows are left uncategorized until an owner assigns them.
+
+**Done when:** owners can assign products to the provided categories and shoppers can filter the homepage by category.
 

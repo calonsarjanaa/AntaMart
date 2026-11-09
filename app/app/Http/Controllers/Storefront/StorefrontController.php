@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Storefront;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Models\ProductCategory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -14,6 +15,7 @@ class StorefrontController extends Controller
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:100'],
             'availability' => ['nullable', 'in:all,in-stock,sold-out'],
+            'category' => ['nullable', 'string', 'exists:product_categories,slug'],
         ]);
 
         $query = Product::query()
@@ -26,6 +28,10 @@ class StorefrontController extends Controller
                 $products->where('name', 'like', "%{$term}%")
                     ->orWhere('description', 'like', "%{$term}%");
             });
+        }
+
+        if (!empty($filters['category'])) {
+            $query->whereHas('category', fn ($category) => $category->where('slug', $filters['category']));
         }
 
         if (($filters['availability'] ?? 'all') === 'in-stock') {
@@ -51,6 +57,9 @@ class StorefrontController extends Controller
             'products' => $products,
             'search' => $filters['q'] ?? '',
             'availability' => $filters['availability'] ?? 'all',
+            'categories' => ProductCategory::query()->orderBy('id')->get(),
+            'categoryFilter' => $filters['category'] ?? '',
+            'selectedCategory' => ProductCategory::query()->where('slug', $filters['category'] ?? '')->first(),
         ]);
     }
 
