@@ -61,14 +61,49 @@
     @endif
     <main id="main-content">@yield('content')</main>
     <footer class="site-footer">
-        <div class="footer-inner">
-            <a class="wordmark footer-wordmark" href="{{ route('storefront.home') }}">
-                <span class="wordmark-mark" aria-hidden="true">A</span>
-                <span>AntaMart</span>
-            </a>
-            <a class="footer-track-link" href="{{ route('storefront.orders.track') }}">Lacak pesanan</a>
-            <p>Belanja kebutuhan sehari-hari.</p>
-            <span class="footer-copyright">© {{ now()->year }} AntaMart</span>
+        <div class="footer-container">
+            <div class="footer-main">
+                <div class="footer-col footer-col-brand">
+                    <a class="footer-brand" href="{{ route('storefront.home') }}" aria-label="AntaMart">
+                        <span class="footer-brand-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3.5" y="5.5" width="17" height="15" rx="3.5"/>
+                                <path d="M8.5 9.5a3.5 3.5 0 0 0 7 0"/>
+                            </svg>
+                        </span>
+                        <span class="footer-brand-name">AntaMart</span>
+                    </a>
+                    <p class="footer-desc">
+                        Platform e-commerce terpercaya untuk memenuhi segala kebutuhan harianmu. Belanja aman, mudah, dan cepat dengan layanan dukungan pelanggan terbaik.
+                    </p>
+                </div>
+                <div class="footer-col">
+                    <h3 class="footer-heading">Layanan Pelanggan</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">Pusat Bantuan</a></li>
+                        <li><a href="#">Cara Pengembalian</a></li>
+                        <li><a href="{{ route('storefront.orders.track') }}">Lacak Pesanan</a></li>
+                        <li><a href="#">Syarat & Ketentuan</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h3 class="footer-heading">Jelajahi</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">Tentang Kami</a></li>
+                        <li><a href="#">Karir</a></li>
+                        <li><a href="#">Blog</a></li>
+                        <li><a href="#">Mitra</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p class="footer-copyright">© {{ now()->year }} AntaMart. Hak Cipta Dilindungi.</p>
+                <div class="footer-socials">
+                    <a href="https://facebook.com" target="_blank" rel="noopener noreferrer">Facebook</a>
+                    <a href="https://instagram.com" target="_blank" rel="noopener noreferrer">Instagram</a>
+                    <a href="https://twitter.com" target="_blank" rel="noopener noreferrer">Twitter</a>
+                </div>
+            </div>
         </div>
     </footer>
 </body>
