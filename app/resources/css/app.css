@@ -70,6 +70,7 @@ button, input, textarea, select { font: inherit; }
 .section-heading h2 { margin: 0; color: #273244; font-size: 16px; font-weight: 750; letter-spacing: -.02em; }
 .result-count { padding-bottom: 2px; color: #818a99; font-size: 9px; }
 .filter-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 13px; }
+.category-filter-chips { margin-top: 4px; }
 .filter-chip { display: inline-flex; min-height: 27px; align-items: center; justify-content: center; padding: 0 13px; border: 1px solid #dfe3e9; border-radius: 999px; color: #475467; background: #fff; font-size: 9px; transition: border-color .15s ease, color .15s ease, background .15s ease; }
 .filter-chip:hover { border-color: #9dbcf8; color: var(--blue); }
 .filter-chip.is-active { border-color: var(--blue); color: #fff; background: var(--blue); box-shadow: 0 2px 4px rgba(37,99,235,.17); }
@@ -346,7 +347,7 @@ button, input, textarea, select { font: inherit; }
 .owner-empty-panel h2 { margin: 0 0 6px; color: #344054; font-size: 13px; }
 .owner-empty-panel p { margin: 0; color: #7b8494; font-size: 10px; }
 .owner-orders-table { min-width: 860px; }
-.owner-products-table { min-width: 620px; }
+.owner-products-table { min-width: 760px; }
 .owner-product-status { display: inline-flex; padding: 4px 7px; border-radius: 4px; color: #795b08; background: #fff5d6; font-size: 9px; font-weight: 650; }
 .owner-product-status.is-active { color: #17663a; background: #e9f7ed; }
 .owner-product-management { display: grid; align-items: start; gap: 13px; }

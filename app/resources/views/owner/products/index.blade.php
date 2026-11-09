@@ -33,11 +33,12 @@
         @else
             <div class="owner-table-wrap">
                 <table class="owner-table owner-products-table">
-                    <thead><tr><th>Produk</th><th>Status</th><th>Varian</th><th>Stok tersedia</th><th><span class="visually-hidden">Aksi</span></th></tr></thead>
+                    <thead><tr><th>Produk</th><th>Kategori</th><th>Status</th><th>Varian</th><th>Stok tersedia</th><th><span class="visually-hidden">Aksi</span></th></tr></thead>
                     <tbody>
                         @foreach ($products as $product)
                             <tr>
                                 <td><span class="owner-buyer-name">{{ $product->name }}</span><small>/products/{{ $product->slug }}</small></td>
+                                <td>{{ $product->category?->name ?? 'Belum diatur' }}</td>
                                 <td><span class="owner-product-status {{ $product->is_active ? 'is-active' : '' }}">{{ $product->is_active ? 'Aktif' : 'Diarsipkan' }}</span></td>
                                 <td>{{ $product->variants_count }}</td>
                                 <td>{{ $product->variants->sum(fn ($variant) => $variant->is_active ? $variant->available_stock : 0) }}</td>

@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\AuditLog;
 use App\Models\Product;
+use App\Models\ProductCategory;
 use App\Models\ProductVariant;
 use App\Services\AuditService;
 use Illuminate\Database\Eloquent\Builder;
@@ -25,7 +25,7 @@ class OwnerProductController extends Controller
 
         $products = Product::query()
             ->withCount('variants')
-            ->with(['variants' => fn ($query) => $query->orderBy('id')])
+            ->with(['category', 'variants' => fn ($query) => $query->orderBy('id')])
             ->when($search !== '', fn (Builder $query) => $query->where(function (Builder $query) use ($search) {
                 $query->where('name', 'like', "%{$search}%")
                     ->orWhere('slug', 'like', "%{$search}%")
@@ -41,13 +41,16 @@ class OwnerProductController extends Controller
 
     public function create(): View
     {
-        return view('owner.products.create');
+        return view('owner.products.create', [
+            'categories' => ProductCategory::query()->orderBy('id')->get(),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'category_id' => ['required', 'integer', 'exists:product_categories,id'],
             'description' => ['nullable', 'string', 'max:10000'],
             'image' => ['nullable', 'image', 'max:5120'],
             'variant_name' => ['required', 'string', 'max:255'],
@@ -68,6 +71,7 @@ class OwnerProductController extends Controller
             $product = Product::create([
                 'name' => $data['name'],
                 'slug' => $slug,
+                'category_id' => $data['category_id'],
                 'description' => $data['description'] ?? null,
                 'image_path' => $imagePath,
                 'is_active' => true,
@@ -91,13 +95,17 @@ class OwnerProductController extends Controller
     {
         $product->load(['variants' => fn ($query) => $query->orderBy('id')]);
 
-        return view('owner.products.edit', compact('product'));
+        return view('owner.products.edit', [
+            'product' => $product,
+            'categories' => ProductCategory::query()->orderBy('id')->get(),
+        ]);
     }
 
     public function update(Request $request, Product $product): RedirectResponse
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'category_id' => ['required', 'integer', 'exists:product_categories,id'],
             'description' => ['nullable', 'string', 'max:10000'],
             'image' => ['nullable', 'image', 'max:5120'],
             'is_active' => ['required', 'boolean'],
@@ -109,6 +117,7 @@ class OwnerProductController extends Controller
         }
         $product->update([
             'name' => $data['name'],
+            'category_id' => $data['category_id'],
             'description' => $data['description'] ?? null,
             'is_active' => (bool) $data['is_active'],
             'image_path' => $data['image_path'] ?? $oldImagePath,

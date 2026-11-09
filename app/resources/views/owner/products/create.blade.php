@@ -16,6 +16,7 @@
                 <h2 id="new-product-info-title">Informasi produk</h2>
                 <div class="owner-product-form-grid">
                     <div class="form-field"><label class="field-label" for="name">Nama produk <span class="required-mark" aria-hidden="true">*</span></label><input class="field-input" id="name" name="name" value="{{ old('name') }}" maxlength="255" required></div>
+                    <div class="form-field"><label class="field-label" for="category_id">Kategori <span class="required-mark" aria-hidden="true">*</span></label><select class="field-input" id="category_id" name="category_id" required><option value="">Pilih kategori</option>@foreach ($categories as $category)<option value="{{ $category->id }}" @selected((string) old('category_id') === (string) $category->id)>{{ $category->name }}</option>@endforeach</select></div>
                     <div class="form-field owner-product-description"><label class="field-label" for="description">Deskripsi</label><textarea class="field-input" id="description" name="description" rows="5" maxlength="10000">{{ old('description') }}</textarea></div>
                     <div class="form-field owner-product-description"><label class="field-label" for="image">Foto produk <span>(opsional, maks. 5 MB)</span></label><input class="field-input" id="image" name="image" type="file" accept="image/*"><small>Gunakan gambar yang dapat dipakai di storefront.</small></div>
                 </div>
