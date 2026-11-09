@@ -3,12 +3,19 @@
 namespace App\Http\Controllers\Storefront;
 
 use App\Http\Controllers\Controller;
+use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
+use App\Enums\PaymentStatus;
+use App\Events\AuditEvent;
+use App\Events\PaymentExpired;
 use App\Exceptions\InsufficientStockException;
 use App\Models\Order;
 use App\Models\ProductVariant;
 use App\Services\CheckoutService;
+use App\Services\InventoryService;
 use App\Services\PaymentService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\URL;
@@ -132,9 +139,143 @@ class BrowserCheckoutController extends Controller
     public function retryPayment(PaymentService $paymentService)
     {
         $order = $this->pendingOrder();
-        abort_unless($order, 404);
+        if (!$order) {
+            return redirect()->route('storefront.cart.index')->with('status', 'Tidak ada pesanan aktif yang menunggu pembayaran.');
+        }
 
         return $this->continuePayment($order, $paymentService);
+    }
+
+    public function switchToCod(InventoryService $inventoryService)
+    {
+        $order = $this->pendingOrder();
+        if (!$order) {
+            return redirect()->route('storefront.cart.index')->withErrors(['cart' => 'Tidak ada pesanan aktif.']);
+        }
+
+        DB::transaction(function () use ($order, $inventoryService) {
+            $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            if ($lockedOrder->status !== OrderStatus::PendingPayment) {
+                return;
+            }
+
+            $payment = $lockedOrder->payment()->lockForUpdate()->first();
+            if ($payment) {
+                $payment->update([
+                    'payment_method' => PaymentMethod::CashOnDelivery,
+                    'status' => PaymentStatus::Pending,
+                ]);
+            }
+
+            $lockedOrder->transitionTo(OrderStatus::Processing);
+            $inventoryService->convertReservationsToPhysicalDeduction($lockedOrder);
+
+            AuditEvent::dispatch(
+                'payment.cod_order_created',
+                $lockedOrder->id,
+                $lockedOrder->customer_id,
+                $lockedOrder->customer_id ? 'customer' : 'guest',
+                ['amount' => $lockedOrder->total, 'switched_from' => 'xendit']
+            );
+        });
+
+        session()->forget(['cart', 'checkout.order_id', 'checkout.idempotency_key']);
+
+        return redirect()->to(URL::temporarySignedRoute(
+            'storefront.checkout.result',
+            now()->addDays(3),
+            ['orderId' => $order->id]
+        ))->with('status', 'Metode pembayaran berhasil dialihkan ke Bayar di Tempat (COD). Pesanan sedang kami proses!');
+    }
+
+    public function cancelPending(InventoryService $inventoryService)
+    {
+        $order = $this->pendingOrder();
+        if (!$order) {
+            session()->forget(['checkout.order_id', 'checkout.idempotency_key']);
+            return redirect()->route('storefront.cart.index');
+        }
+
+        DB::transaction(function () use ($order, $inventoryService) {
+            $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            if ($lockedOrder->status === OrderStatus::PendingPayment) {
+                $lockedOrder->transitionTo(OrderStatus::Expired);
+
+                $payment = $lockedOrder->payment()->lockForUpdate()->first();
+                if ($payment && $payment->status === PaymentStatus::Pending) {
+                    $payment->status = PaymentStatus::Expired;
+                    $payment->save();
+                }
+
+                $inventoryService->releaseReservations($lockedOrder);
+                PaymentExpired::dispatch($lockedOrder);
+
+                AuditEvent::dispatch(
+                    'order.cancelled_by_customer',
+                    $lockedOrder->id,
+                    $lockedOrder->customer_id,
+                    $lockedOrder->customer_id ? 'customer' : 'guest',
+                    ['reason' => 'cancelled_from_payment_unavailable']
+                );
+            }
+        });
+
+        // Restore items back to customer session cart without duplicating
+        $cart = session('cart', []);
+        foreach ($order->items as $item) {
+            $cart[$item->product_variant_id] = max((int) ($cart[$item->product_variant_id] ?? 0), $item->quantity);
+        }
+        session(['cart' => $cart]);
+
+        session()->forget(['checkout.order_id', 'checkout.idempotency_key']);
+
+        return redirect()->route('storefront.cart.index')->with('status', 'Pesanan berhasil dibatalkan dan produk dikembalikan ke keranjang Anda.');
+    }
+
+    public function devSimulatePayment(InventoryService $inventoryService)
+    {
+        abort_unless(app()->environment('local'), 403);
+
+        $order = $this->pendingOrder();
+        if (!$order) {
+            return redirect()->route('storefront.cart.index');
+        }
+
+        DB::transaction(function () use ($order, $inventoryService) {
+            $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            if ($lockedOrder->status !== OrderStatus::PendingPayment) {
+                return;
+            }
+
+            $payment = $lockedOrder->payment()->lockForUpdate()->first();
+            if ($payment) {
+                $payment->update([
+                    'status' => PaymentStatus::Paid,
+                    'paid_at' => now(),
+                    'xendit_invoice_id' => $payment->xendit_invoice_id ?? ('dev_sim_' . Str::random(12)),
+                    'xendit_payment_url' => $payment->xendit_payment_url ?? 'https://checkout.xendit.test/dev-simulated',
+                ]);
+            }
+
+            $lockedOrder->transitionTo(OrderStatus::Processing);
+            $inventoryService->convertReservationsToPhysicalDeduction($lockedOrder);
+
+            AuditEvent::dispatch(
+                'payment.confirmed',
+                $lockedOrder->id,
+                $lockedOrder->customer_id,
+                'system',
+                ['amount' => $lockedOrder->total, 'mode' => 'dev_simulation']
+            );
+        });
+
+        session()->forget(['cart', 'checkout.order_id', 'checkout.idempotency_key']);
+
+        return redirect()->to(URL::temporarySignedRoute(
+            'storefront.checkout.result',
+            now()->addDays(3),
+            ['orderId' => $order->id]
+        ))->with('status', '[Mode Lokal] Simulasi pembayaran Xendit berhasil. Pesanan langsung diproses!');
     }
 
     public function result(string $orderId)
@@ -190,17 +331,25 @@ class BrowserCheckoutController extends Controller
             return null;
         }
 
-        return Order::query()
+        $order = Order::query()
             ->whereKey($orderId)
             ->where('idempotency_key', $key)
             ->with(['items', 'address', 'payment'])
             ->first();
+
+        if (!$order || $order->status !== OrderStatus::PendingPayment || ($order->expires_at && $order->expires_at->isPast())) {
+            session()->forget(['checkout.order_id', 'checkout.idempotency_key']);
+
+            return null;
+        }
+
+        return $order;
     }
 
     private function continuePayment(Order $order, PaymentService $paymentService)
     {
         $order->loadMissing(['address', 'payment']);
-        if ($order->status->value !== 'pending_payment') {
+        if ($order->status !== OrderStatus::PendingPayment) {
             session()->forget(['cart', 'checkout.order_id', 'checkout.idempotency_key']);
 
             return redirect()->to(URL::temporarySignedRoute(
@@ -223,7 +372,10 @@ class BrowserCheckoutController extends Controller
                 'checkout.idempotency_key' => $order->idempotency_key,
             ]);
 
-            return $this->paymentUnavailable($order->fresh(['items', 'payment']));
+            return $this->paymentUnavailable(
+                $order->fresh(['items', 'payment']),
+                'Tautan pembayaran Xendit belum berhasil dibuat (gateway belum terhubung atau API key belum dikonfigurasi). Silakan coba lagi, beralih ke Bayar di Tempat (COD), atau batalkan pesanan untuk memulai ulang.'
+            );
         }
 
         session()->forget(['cart', 'checkout.order_id', 'checkout.idempotency_key']);
@@ -231,10 +383,11 @@ class BrowserCheckoutController extends Controller
         return redirect()->away($paymentUrl);
     }
 
-    private function paymentUnavailable(Order $order)
+    private function paymentUnavailable(Order $order, ?string $errorMessage = null)
     {
         return response()->view('storefront.checkout.payment-unavailable', [
             'order' => $order->loadMissing(['items', 'payment']),
+            'errorMessage' => $errorMessage,
         ]);
     }
 }

@@ -8,6 +8,7 @@ use App\Enums\PaymentStatus;
 use App\Enums\PaymentMethod;
 use App\Events\AuditEvent;
 use App\Exceptions\InsufficientStockException;
+use App\Jobs\ExpireUnpaidOrder;
 use App\Models\Order;
 use App\Models\OrderAddress;
 use App\Models\OrderItem;
@@ -129,6 +130,8 @@ class CheckoutService
             $data,
             $paymentMethod
         ) {
+            $expiresAt = $paymentMethod === PaymentMethod::CashOnDelivery ? null : now()->addMinutes(15);
+
             // FR-TRX-003 & FR-TRX-004 — Create Order with snapshot values
             $order = Order::create([
                 'customer_id'     => $user?->id,
@@ -141,6 +144,7 @@ class CheckoutService
                 'shipping_cost'   => $shippingCost,
                 'total'           => $total,
                 'idempotency_key' => $idempotencyKey,
+                'expires_at'      => $expiresAt,
             ]);
 
             // FR-TRX-004 — Snapshot product details into order_items
@@ -193,7 +197,14 @@ class CheckoutService
                 'payment_method' => $paymentMethod,
                 'amount'         => $total,
                 'status'         => PaymentStatus::Pending,
+                'expired_at'     => $expiresAt,
             ]);
+
+            if ($expiresAt) {
+                ExpireUnpaidOrder::dispatch($order->id)
+                    ->onConnection('database')
+                    ->delay($expiresAt);
+            }
 
             AuditEvent::dispatch(
                 'order.created',

@@ -214,3 +214,69 @@ test('owner login shows the rate limit response after repeated invalid attempts'
         'password' => 'wrong-password',
     ])->assertTooManyRequests();
 });
+
+test('customer can recover from xendit failure by switching to COD or cancelling pending order', function () {
+    Http::fake([
+        'https://api.xendit.co/v2/invoices' => Http::response(['message' => 'Gateway error'], 500),
+    ]);
+
+    // Put item in cart
+    $this->post('/cart/items', ['product_variant_id' => $this->variant->id, 'quantity' => 1]);
+
+    // Checkout with Xendit, which fails
+    $response = $this->post('/checkout', [
+        'guest_email' => 'failed-payment@example.test',
+        'guest_phone' => '081234567890',
+        'payment_method' => 'xendit',
+        'shipping_address' => [
+            'recipient_name' => 'Failed Buyer',
+            'phone' => '081234567890',
+            'address_line1' => 'Jl. Gagal 1',
+            'city' => 'Jakarta',
+            'province' => 'DKI Jakarta',
+            'postal_code' => '10110',
+        ],
+    ]);
+
+    $response->assertOk()
+        ->assertSee('Pesanan Tersimpan, Pembayaran Belum Siap')
+        ->assertSee('Beralih ke Bayar di Tempat (COD)')
+        ->assertSee('Batalkan Pesanan');
+
+    $order = Order::where('guest_email', 'failed-payment@example.test')->firstOrFail();
+    expect($order->status)->toBe(OrderStatus::PendingPayment)
+        ->and($order->expires_at)->not->toBeNull()
+        ->and($this->variant->fresh()->stock_reserved)->toBe(1);
+
+    // Test cancelling pending order releases reservation and restores cart
+    $cancelResponse = $this->post('/checkout/payment/cancel');
+    $cancelResponse->assertRedirect(route('storefront.cart.index'));
+
+    expect($order->fresh()->status)->toBe(OrderStatus::Expired)
+        ->and($this->variant->fresh()->stock_reserved)->toBe(0)
+        ->and(session('cart'))->toBe([$this->variant->id => 1]);
+
+    // Checkout again and switch to COD
+    $this->post('/checkout', [
+        'guest_email' => 'failed-payment2@example.test',
+        'guest_phone' => '081234567890',
+        'payment_method' => 'xendit',
+        'shipping_address' => [
+            'recipient_name' => 'Failed Buyer',
+            'phone' => '081234567890',
+            'address_line1' => 'Jl. Gagal 1',
+            'city' => 'Jakarta',
+            'province' => 'DKI Jakarta',
+            'postal_code' => '10110',
+        ],
+    ]);
+
+    $codResponse = $this->post('/checkout/payment/switch-cod');
+    $codResponse->assertRedirect();
+
+    $secondOrder = Order::where('guest_email', 'failed-payment2@example.test')->firstOrFail();
+    expect($secondOrder->status)->toBe(OrderStatus::Processing)
+        ->and($secondOrder->payment->payment_method)->toBe(\App\Enums\PaymentMethod::CashOnDelivery)
+        ->and($this->variant->fresh()->stock_reserved)->toBe(0)
+        ->and($this->variant->fresh()->stock_physical)->toBe(7);
+});

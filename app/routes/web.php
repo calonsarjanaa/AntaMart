@@ -35,6 +35,9 @@ Route::delete('/cart/items/{variantId}', [CartController::class, 'destroy'])->na
 Route::get('/checkout', [BrowserCheckoutController::class, 'create'])->name('storefront.checkout.create');
 Route::post('/checkout', [BrowserCheckoutController::class, 'store'])->name('storefront.checkout.store');
 Route::post('/checkout/payment/retry', [BrowserCheckoutController::class, 'retryPayment'])->name('storefront.checkout.payment.retry');
+Route::post('/checkout/payment/switch-cod', [BrowserCheckoutController::class, 'switchToCod'])->name('storefront.checkout.payment.switch-cod');
+Route::post('/checkout/payment/cancel', [BrowserCheckoutController::class, 'cancelPending'])->name('storefront.checkout.payment.cancel');
+Route::post('/checkout/payment/dev-simulate', [BrowserCheckoutController::class, 'devSimulatePayment'])->name('storefront.checkout.payment.dev-simulate');
 Route::get('/checkout/result/{orderId}', [BrowserCheckoutController::class, 'result'])->middleware('signed')->name('storefront.checkout.result');
 Route::post('/checkout/result/{orderId}/retry', [BrowserCheckoutController::class, 'retryResultPayment'])->middleware('signed')->name('storefront.checkout.result.retry');
 Route::get('/orders/track', [BrowserGuestOrderTrackingController::class, 'index'])->name('storefront.orders.track');
