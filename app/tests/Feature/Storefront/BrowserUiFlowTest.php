@@ -72,7 +72,11 @@ test('guest can browse, add to cart, check out, hand off payment, and track the 
     $this->post('/cart/items', ['product_variant_id' => $this->variant->id, 'quantity' => 1])
         ->assertRedirect(route('storefront.cart.index'));
     $this->get('/cart')->assertOk()->assertSee('UI Test Mug')->assertSee('Lanjut ke checkout');
-    $this->get('/checkout')->assertOk()->assertSee('Alamat pengiriman')->assertSee('Kontak pembeli');
+    $this->get('/checkout')
+        ->assertOk()
+        ->assertSee('Alamat pengiriman')
+        ->assertSee('Kontak pembeli')
+        ->assertSee('Gunakan informasi checkout sebelumnya');
 
     $this->post('/checkout', [
         'guest_email' => 'browser-buyer@example.test',
@@ -279,4 +283,28 @@ test('customer can recover from xendit failure by switching to COD or cancelling
         ->and($secondOrder->payment->payment_method)->toBe(\App\Enums\PaymentMethod::CashOnDelivery)
         ->and($this->variant->fresh()->stock_reserved)->toBe(0)
         ->and($this->variant->fresh()->stock_physical)->toBe(7);
+});
+
+test('checkout page renders toggle switch with previous checkout address for returning customer', function () {
+    $prevOrder = ($this->makeOrder)('prev-checkout-order', OrderStatus::Completed, $this->customer->id);
+    \App\Models\OrderAddress::create([
+        'order_id' => $prevOrder->id,
+        'recipient_name' => 'UI Customer Old',
+        'phone' => '0899999999',
+        'address_line1' => 'Jl. Kebon Jeruk No. 5',
+        'city' => 'Jakarta Barat',
+        'province' => 'DKI Jakarta',
+        'postal_code' => '11530',
+        'country' => 'ID',
+    ]);
+
+    $this->actingAs($this->customer)
+        ->post('/cart/items', ['product_variant_id' => $this->variant->id, 'quantity' => 1]);
+
+    $this->actingAs($this->customer)
+        ->get('/checkout')
+        ->assertOk()
+        ->assertSee('Gunakan informasi checkout sebelumnya')
+        ->assertSee('Jl. Kebon Jeruk No. 5')
+        ->assertSee('11530');
 });

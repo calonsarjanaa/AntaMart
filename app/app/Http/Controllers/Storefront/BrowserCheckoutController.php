@@ -70,10 +70,53 @@ class BrowserCheckoutController extends Controller
             ]);
         }
 
+        $lastCheckout = null;
+        if ($customer) {
+            $lastOrder = Order::query()
+                ->where('customer_id', $customer->id)
+                ->whereHas('address')
+                ->latest()
+                ->with('address')
+                ->first();
+
+            if ($lastOrder?->address) {
+                $lastCheckout = [
+                    'recipient_name' => $lastOrder->address->recipient_name,
+                    'phone' => $lastOrder->address->phone,
+                    'address_line1' => $lastOrder->address->address_line1,
+                    'address_line2' => $lastOrder->address->address_line2 ?? '',
+                    'city' => $lastOrder->address->city,
+                    'province' => $lastOrder->address->province,
+                    'postal_code' => $lastOrder->address->postal_code,
+                ];
+            }
+        } elseif (session()->has('last_checkout_data')) {
+            $lastCheckout = session('last_checkout_data');
+        } else {
+            $recentOrderId = session('last_completed_order_id');
+            if ($recentOrderId) {
+                $lastOrder = Order::query()->whereKey($recentOrderId)->with('address')->first();
+                if ($lastOrder?->address) {
+                    $lastCheckout = [
+                        'guest_email' => $lastOrder->guest_email,
+                        'guest_phone' => $lastOrder->guest_phone,
+                        'recipient_name' => $lastOrder->address->recipient_name,
+                        'phone' => $lastOrder->address->phone,
+                        'address_line1' => $lastOrder->address->address_line1,
+                        'address_line2' => $lastOrder->address->address_line2 ?? '',
+                        'city' => $lastOrder->address->city,
+                        'province' => $lastOrder->address->province,
+                        'postal_code' => $lastOrder->address->postal_code,
+                    ];
+                }
+            }
+        }
+
         return view('storefront.checkout.create', [
             'items' => $items,
             'subtotal' => $items->sum('line_total'),
             'customer' => $customer,
+            'lastCheckout' => $lastCheckout,
         ]);
     }
 
@@ -114,7 +157,20 @@ class BrowserCheckoutController extends Controller
         }
 
         $idempotencyKey = session('checkout.idempotency_key') ?? (string) Str::uuid();
-        session(['checkout.idempotency_key' => $idempotencyKey]);
+        session([
+            'checkout.idempotency_key' => $idempotencyKey,
+            'last_checkout_data' => [
+                'guest_email' => $validated['guest_email'] ?? null,
+                'guest_phone' => $validated['guest_phone'] ?? null,
+                'recipient_name' => $validated['shipping_address']['recipient_name'],
+                'phone' => $validated['shipping_address']['phone'],
+                'address_line1' => $validated['shipping_address']['address_line1'],
+                'address_line2' => $validated['shipping_address']['address_line2'] ?? '',
+                'city' => $validated['shipping_address']['city'],
+                'province' => $validated['shipping_address']['province'],
+                'postal_code' => $validated['shipping_address']['postal_code'],
+            ],
+        ]);
 
         try {
             $order = $checkoutService->checkout([
