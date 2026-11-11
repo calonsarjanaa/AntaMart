@@ -35,4 +35,9 @@ class Product extends Model
     {
         return $this->belongsTo(ProductCategory::class, 'category_id');
     }
+
+    public function isAgeRestricted(): bool
+    {
+        return (bool) $this->category?->isAgeRestricted();
+    }
 }

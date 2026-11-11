@@ -95,3 +95,13 @@ test('payments table stores the selected payment method', function () {
     expect(Schema::hasColumn('payments', 'payment_method'))->toBeTrue();
 });
 
+test('product_categories table has min_age and default categories including rokok 21+', function () {
+    expect(Schema::hasColumn('product_categories', 'min_age'))->toBeTrue();
+
+    $rokok = \App\Models\ProductCategory::where('slug', 'rokok-21-plus')->first();
+    expect($rokok)->not->toBeNull()
+        ->and($rokok->name)->toBe('Rokok 21+')
+        ->and($rokok->min_age)->toBe(21)
+        ->and($rokok->isAgeRestricted())->toBeTrue();
+});
+

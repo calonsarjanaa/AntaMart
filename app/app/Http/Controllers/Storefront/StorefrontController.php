@@ -18,6 +18,19 @@ class StorefrontController extends Controller
             'category' => ['nullable', 'string', 'exists:product_categories,slug'],
         ]);
 
+        $selectedCategory = !empty($filters['category'])
+            ? ProductCategory::query()->where('slug', $filters['category'])->first()
+            : null;
+
+        if ($selectedCategory && $selectedCategory->isAgeRestricted()) {
+            $minAge = $selectedCategory->min_age ?? 21;
+            if (!session("age_verified_{$minAge}")) {
+                return redirect()->route('storefront.age-verification.show', [
+                    'category' => $selectedCategory->slug,
+                ]);
+            }
+        }
+
         $query = Product::query()
             ->where('is_active', true)
             ->whereHas('variants', fn ($variants) => $variants->where('is_active', true));
@@ -30,8 +43,13 @@ class StorefrontController extends Controller
             });
         }
 
-        if (!empty($filters['category'])) {
-            $query->whereHas('category', fn ($category) => $category->where('slug', $filters['category']));
+        if ($selectedCategory) {
+            $query->where('category_id', $selectedCategory->id);
+        } else {
+            $query->where(function ($q): void {
+                $q->whereNull('category_id')
+                    ->orWhereHas('category', fn ($category) => $category->whereNull('min_age')->orWhere('min_age', '<=', 0));
+            });
         }
 
         if (($filters['availability'] ?? 'all') === 'in-stock') {
@@ -59,7 +77,7 @@ class StorefrontController extends Controller
             'availability' => $filters['availability'] ?? 'all',
             'categories' => ProductCategory::query()->orderBy('id')->get(),
             'categoryFilter' => $filters['category'] ?? '',
-            'selectedCategory' => ProductCategory::query()->where('slug', $filters['category'] ?? '')->first(),
+            'selectedCategory' => $selectedCategory,
         ]);
     }
 
@@ -69,8 +87,21 @@ class StorefrontController extends Controller
             ->where('slug', $slug)
             ->where('is_active', true)
             ->whereHas('variants', fn ($variants) => $variants->where('is_active', true))
-            ->with(['variants' => fn ($variants) => $variants->where('is_active', true)->orderBy('name')])
+            ->with([
+                'category',
+                'variants' => fn ($variants) => $variants->where('is_active', true)->orderBy('name'),
+            ])
             ->firstOrFail();
+
+        if ($product->isAgeRestricted()) {
+            $minAge = $product->category->min_age ?? 21;
+            if (!session("age_verified_{$minAge}")) {
+                return redirect()->route('storefront.age-verification.show', [
+                    'category' => $product->category->slug,
+                    'return_url' => route('storefront.products.show', $product->slug),
+                ]);
+            }
+        }
 
         return view('storefront.products.show', [
             'product' => $this->presentProduct($product),

@@ -58,9 +58,14 @@
                href="{{ route('storefront.home', array_filter(['q' => $search, 'availability' => $availability === 'all' ? null : $availability])) }}"
                @if ($categoryFilter === '') aria-current="page" @endif>Semua kategori</a>
             @foreach ($categories as $category)
-                <a class="filter-chip {{ $categoryFilter === $category->slug ? 'is-active' : '' }}"
+                <a class="filter-chip {{ $categoryFilter === $category->slug ? 'is-active' : '' }} {{ $category->isAgeRestricted() ? 'chip-age-restricted' : '' }}"
                    href="{{ route('storefront.home', array_filter(['q' => $search, 'availability' => $availability === 'all' ? null : $availability, 'category' => $category->slug])) }}"
-                   @if ($categoryFilter === $category->slug) aria-current="page" @endif>{{ $category->name }}</a>
+                   @if ($categoryFilter === $category->slug) aria-current="page" @endif>
+                    {{ $category->name }}
+                    @if ($category->isAgeRestricted())
+                        <span class="badge-age-limit" aria-label="Batas usia {{ $category->min_age }} tahun">{{ $category->min_age }}+</span>
+                    @endif
+                </a>
             @endforeach
         </nav>
 
