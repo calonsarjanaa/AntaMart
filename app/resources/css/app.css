@@ -326,6 +326,20 @@ button, input, textarea, select { font: inherit; }
 .auth-switch { margin: 17px 0 0; color: #667085; font-size: 10px; text-align: center; }
 .auth-switch a, .auth-guest-link { color: var(--blue); font-weight: 650; }
 .auth-guest-link { display: block; margin-top: 14px; font-size: 10px; text-align: center; }
+.age-verify-card { width: min(100%, 450px); margin: 30px auto; padding: 28px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; text-align: center; }
+.age-badge-circle { display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 52px; border-radius: 50%; background: #fee2e2; color: #dc2626; font-size: 18px; font-weight: 800; border: 2px solid #ef4444; margin-bottom: 12px; letter-spacing: -0.02em; }
+.age-verify-card h1 { margin: 0 0 10px; color: #1e293b; font-size: 21px; font-weight: 750; letter-spacing: -0.025em; }
+.age-verify-intro { color: #64748b; font-size: 11px; line-height: 1.6; margin: 0 0 20px; text-align: left; }
+.age-verify-form { text-align: left; }
+.age-verify-form .form-field { margin-bottom: 14px; }
+.age-verify-form .button { width: 100%; min-height: 39px; border-radius: 5px; font-size: 11px; margin-top: 6px; }
+.age-verify-back { display: inline-block; margin-top: 16px; color: #64748b; font-size: 10px; text-decoration: none; }
+.age-verify-back:hover { color: var(--blue); text-decoration: underline; }
+.chip-age-restricted { border-color: #fca5a5 !important; background: #fff5f5 !important; color: #b91c1c !important; }
+.chip-age-restricted:hover { background: #fee2e2 !important; border-color: #ef4444 !important; }
+.chip-age-restricted.is-active { background: #dc2626 !important; border-color: #dc2626 !important; color: #fff !important; }
+.badge-age-limit { display: inline-block; padding: 1px 5px; margin-left: 4px; font-size: 9px; font-weight: 700; border-radius: 4px; background: #fee2e2; color: #dc2626; vertical-align: middle; }
+.chip-age-restricted.is-active .badge-age-limit { background: #fff; color: #dc2626; }
 .account-card { display: flex; align-items: center; gap: 15px; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; }
 .account-avatar { display: grid; width: 45px; height: 45px; flex: 0 0 45px; place-items: center; border-radius: 50%; color: var(--blue); background: #eef4ff; font-size: 17px; font-weight: 750; }
 .account-details { min-width: 0; }

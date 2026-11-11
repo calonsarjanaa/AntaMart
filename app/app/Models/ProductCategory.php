@@ -10,7 +10,16 @@ class ProductCategory extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'slug'];
+    protected $fillable = ['name', 'slug', 'min_age'];
+
+    protected $casts = [
+        'min_age' => 'integer',
+    ];
+
+    public function isAgeRestricted(): bool
+    {
+        return !is_null($this->min_age) && $this->min_age > 0;
+    }
 
     public function products(): HasMany
     {

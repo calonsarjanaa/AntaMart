@@ -8,6 +8,7 @@ use App\Http\Controllers\Storefront\BrowserGuestOrderTrackingController;
 use App\Http\Controllers\Storefront\BrowserGuestCancellationController;
 use App\Http\Controllers\Storefront\CustomerAuthController;
 use App\Http\Controllers\Storefront\CustomerOrderController;
+use App\Http\Controllers\Storefront\AgeVerificationController;
 use App\Http\Controllers\Admin\OwnerAuthController;
 use App\Http\Controllers\Admin\OwnerOrderController;
 use App\Http\Controllers\Admin\OwnerCancellationController;
@@ -27,6 +28,8 @@ use App\Http\Controllers\Admin\OwnerProductController;
 */
 
 Route::get('/', [StorefrontController::class, 'index'])->name('storefront.home');
+Route::get('/categories/{category}/verify-age', [AgeVerificationController::class, 'show'])->name('storefront.age-verification.show');
+Route::post('/categories/{category}/verify-age', [AgeVerificationController::class, 'verify'])->name('storefront.age-verification.verify');
 Route::get('/products/{slug}', [StorefrontController::class, 'show'])->name('storefront.products.show');
 Route::get('/cart', [CartController::class, 'index'])->name('storefront.cart.index');
 Route::post('/cart/items', [CartController::class, 'store'])->name('storefront.cart.items.store');
