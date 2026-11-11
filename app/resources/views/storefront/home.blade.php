@@ -3,12 +3,38 @@
 @section('title', 'Belanja kebutuhan sehari-hari')
 
 @section('content')
-    <section class="home-hero" aria-labelledby="hero-title">
-        <div class="hero-copy">
-            <p class="hero-kicker">PILIHAN UNTUK HARI-HARI</p>
-            <h1 id="hero-title">Belanja kebutuhan<br>jadi lebih mudah.</h1>
-            <p>Temukan produk untuk kebutuhan sehari-hari di AntaMart.</p>
-            <a class="button button-white" href="#products">Belanja sekarang <span aria-hidden="true">›</span></a>
+    <section class="promo-carousel-section" aria-roledescription="carousel" aria-label="Promosi AntaMart">
+        <div class="promo-carousel" id="promoCarousel">
+            <div class="carousel-track" id="carouselTrack">
+                <article class="carousel-slide" role="group" aria-roledescription="slide" aria-label="Slide 1 dari 2: Stok Sembako & Kebutuhan Dapur Menipis?">
+                    <a href="#products" class="carousel-slide-link" aria-label="Stok Sembako & Kebutuhan Dapur Menipis? Diskon beras, minyak goreng. Belanja sekarang">
+                        <img src="{{ asset('images/banners/banner-1.jpg') }}" alt="Stok Sembako & Kebutuhan Dapur Menipis? diskon beras, minyak goreng" loading="eager" decoding="async">
+                    </a>
+                </article>
+                <article class="carousel-slide" role="group" aria-roledescription="slide" aria-label="Slide 2 dari 2: Belanja Harian Lebih Hemat & Praktis!">
+                    <a href="#products" class="carousel-slide-link" aria-label="Belanja Harian Lebih Hemat & Praktis! Penuhi kebutuhan sembako, sayur, & perlengkapan rumah tangga. Belanja sekarang">
+                        <img src="{{ asset('images/banners/banner-2.jpg') }}" alt="Belanja Harian Lebih Hemat & Praktis! Penuhi kebutuhan sembako, sayur, & perlengkapan rumah tangga" loading="lazy" decoding="async">
+                    </a>
+                </article>
+            </div>
+
+            {{-- Previous & Next Navigation Buttons --}}
+            <button class="carousel-arrow carousel-arrow-prev" id="carouselPrevBtn" type="button" aria-label="Slide sebelumnya">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </button>
+            <button class="carousel-arrow carousel-arrow-next" id="carouselNextBtn" type="button" aria-label="Slide berikutnya">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </button>
+
+            {{-- Indicators / Dots --}}
+            <div class="carousel-indicators" id="carouselIndicators" role="tablist" aria-label="Pilih slide promosi">
+                <button type="button" class="carousel-dot is-active" role="tab" aria-selected="true" aria-label="Slide 1" data-index="0"></button>
+                <button type="button" class="carousel-dot" role="tab" aria-selected="false" aria-label="Slide 2" data-index="1"></button>
+            </div>
         </div>
     </section>
 
@@ -99,4 +125,124 @@
             />
         @endif
     </section>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const carousel = document.getElementById('promoCarousel');
+            const track = document.getElementById('carouselTrack');
+            const prevBtn = document.getElementById('carouselPrevBtn');
+            const nextBtn = document.getElementById('carouselNextBtn');
+            const indicatorsContainer = document.getElementById('carouselIndicators');
+            if (!carousel || !track) return;
+
+            const slides = track.querySelectorAll('.carousel-slide');
+            const dots = indicatorsContainer ? indicatorsContainer.querySelectorAll('.carousel-dot') : [];
+            const totalSlides = slides.length;
+            if (totalSlides <= 1) return;
+
+            let currentIndex = 0;
+            let autoSlideTimer = null;
+            const autoSlideInterval = 5000; // 5 seconds
+
+            function goToSlide(index) {
+                currentIndex = (index + totalSlides) % totalSlides;
+                track.style.transform = 'translateX(-' + (currentIndex * 100) + '%)';
+
+                dots.forEach(function (dot, i) {
+                    const isActive = i === currentIndex;
+                    dot.classList.toggle('is-active', isActive);
+                    dot.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                });
+            }
+
+            function nextSlide() {
+                goToSlide(currentIndex + 1);
+            }
+
+            function prevSlide() {
+                goToSlide(currentIndex - 1);
+            }
+
+            function startTimer() {
+                stopTimer();
+                autoSlideTimer = setInterval(nextSlide, autoSlideInterval);
+            }
+
+            function stopTimer() {
+                if (autoSlideTimer) {
+                    clearInterval(autoSlideTimer);
+                    autoSlideTimer = null;
+                }
+            }
+
+            function resetTimer() {
+                startTimer();
+            }
+
+            if (nextBtn) {
+                nextBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    nextSlide();
+                    resetTimer();
+                });
+            }
+
+            if (prevBtn) {
+                prevBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    prevSlide();
+                    resetTimer();
+                });
+            }
+
+            dots.forEach(function (dot) {
+                dot.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const index = parseInt(dot.getAttribute('data-index'), 10);
+                    if (!isNaN(index)) {
+                        goToSlide(index);
+                        resetTimer();
+                    }
+                });
+            });
+
+            // Pause on hover
+            carousel.addEventListener('mouseenter', stopTimer);
+            carousel.addEventListener('mouseleave', startTimer);
+
+            // Pause when page is hidden / tab inactive
+            document.addEventListener('visibilitychange', function () {
+                if (document.hidden) {
+                    stopTimer();
+                } else {
+                    startTimer();
+                }
+            });
+
+            // Touch swipe support for mobile
+            let touchStartX = 0;
+            let touchEndX = 0;
+
+            carousel.addEventListener('touchstart', function (e) {
+                stopTimer();
+                touchStartX = e.changedTouches[0].screenX;
+            }, { passive: true });
+
+            carousel.addEventListener('touchend', function (e) {
+                touchEndX = e.changedTouches[0].screenX;
+                const diffX = touchEndX - touchStartX;
+                if (Math.abs(diffX) > 40) {
+                    if (diffX > 0) {
+                        prevSlide();
+                    } else {
+                        nextSlide();
+                    }
+                }
+                startTimer();
+            }, { passive: true });
+
+            // Start auto-slide timer
+            startTimer();
+        });
+    </script>
 @endsection
