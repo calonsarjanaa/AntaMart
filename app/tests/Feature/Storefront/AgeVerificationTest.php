@@ -143,3 +143,4 @@ test('unverified user accessing rokok product detail is redirected to verify wit
     $productResponse->assertOk()
         ->assertSee('Cerutu Premium Nusantara');
 });
+

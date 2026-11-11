@@ -63,3 +63,4 @@ class AgeVerificationController extends Controller
         return redirect()->to($returnUrl)->with('status', "Verifikasi berhasil. Anda dapat mengakses kategori {$categoryModel->name}.");
     }
 }
+
