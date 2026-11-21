@@ -73,13 +73,13 @@
             <span class="service-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none"><path d="M12 3 19 6v5c0 4.4-2.8 7.8-7 10-4.2-2.2-7-5.6-7-10V6l7-3Z" stroke="currentColor" stroke-width="1.5"/><path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </span>
-            <span><strong>Checkout sebagai tamu</strong><small>Belanja tanpa membuat akun</small></span>
+            <span><strong>Checkout tanpa login</strong><small>Belanja tanpa membuat akun</small></span>
         </article>
         <article class="service-card">
             <span class="service-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 10h8M8 14h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
             </span>
-            <span><strong>Pembayaran via Xendit</strong><small>Status pembayaran diperbarui</small></span>
+            <span><strong>Pembayaran via QRIS</strong><small>Status pembayaran diperbarui</small></span>
         </article>
         <article class="service-card">
             <span class="service-icon" aria-hidden="true">

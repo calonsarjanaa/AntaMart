@@ -334,12 +334,18 @@ class BrowserCheckoutController extends Controller
         ))->with('status', '[Mode Lokal] Simulasi pembayaran Xendit berhasil. Pesanan langsung diproses!');
     }
 
-    public function result(string $orderId)
+    public function result(string $orderId, PaymentService $paymentService)
     {
         $order = Order::query()
             ->whereKey($orderId)
             ->with(['items', 'payment', 'shipment', 'refund', 'latestCancellationRequest'])
             ->firstOrFail();
+
+        if ($order->status === OrderStatus::PendingPayment && $order->payment?->xendit_invoice_id) {
+            if ($paymentService->syncPaymentStatus($order)) {
+                $order->refresh()->load(['items', 'payment', 'shipment', 'refund', 'latestCancellationRequest']);
+            }
+        }
 
         return view('storefront.checkout.result', [
             'order' => $order,

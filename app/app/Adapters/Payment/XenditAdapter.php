@@ -10,12 +10,14 @@ class XenditAdapter implements PaymentGatewayInterface
     public function __construct(
         protected ?string $secretKey = null,
         protected ?string $webhookToken = null,
-        protected ?string $baseUrl = null
+        protected ?string $baseUrl = null,
+        protected ?array $paymentMethods = null
     ) {
         $hasConfig = function_exists('config') && function_exists('app') && app()->has('config');
         $this->secretKey = $secretKey ?? ($hasConfig ? config('services.xendit.secret_key') : null);
         $this->webhookToken = $webhookToken ?? ($hasConfig ? config('services.xendit.webhook_token') : null);
         $this->baseUrl = $baseUrl ?? ($hasConfig ? config('services.xendit.base_url', 'https://api.xendit.co') : 'https://api.xendit.co');
+        $this->paymentMethods = $paymentMethods ?? ($hasConfig ? config('services.xendit.payment_methods', ['QRIS']) : ['QRIS']);
     }
 
     /**
@@ -48,6 +50,11 @@ class XenditAdapter implements PaymentGatewayInterface
             'currency'         => 'IDR',
         ];
 
+        $paymentMethods = $metadata['payment_methods'] ?? $this->paymentMethods;
+        if (!empty($paymentMethods)) {
+            $payload['payment_methods'] = array_values($paymentMethods);
+        }
+
         if (!empty($metadata['phone'])) {
             $payload['customer'] = [
                 'email'           => $customerEmail,
@@ -79,6 +86,29 @@ class XenditAdapter implements PaymentGatewayInterface
         ];
     }
 
+    /**
+     * Fetch the latest invoice status directly from Xendit API.
+     *
+     * @param string $invoiceId
+     * @return array<string, mixed>|null
+     */
+    public function getInvoice(string $invoiceId): ?array
+    {
+        if (empty($this->secretKey) || empty($invoiceId)) {
+            return null;
+        }
+
+        $response = Http::withBasicAuth($this->secretKey, '')
+            ->timeout(10)
+            ->get("{$this->baseUrl}/v2/invoices/{$invoiceId}");
+
+        if (!$response->successful()) {
+            return null;
+        }
+
+        return $response->json();
+    }
+
     public function verifyWebhook(array $headers, array $payload): bool
     {
         $token = $headers['x-callback-token'] ?? null;
@@ -101,7 +131,7 @@ class XenditAdapter implements PaymentGatewayInterface
             'payment_id' => (string) ($data['id'] ?? ''),
             'order_id'   => (string) ($data['reference_id'] ?? $data['external_id'] ?? ''),
             'status'     => (string) ($data['status'] ?? ''),
-            'amount'     => (float) ($data['amount'] ?? 0),
+            'amount'     => (float) ($data['paid_amount'] ?? $data['amount'] ?? 0),
             'raw'        => $payload,
         ];
     }

@@ -8,6 +8,7 @@ use App\Enums\PaymentMethod;
 use App\Events\AuditEvent;
 use App\Exceptions\InvalidOrderStateException;
 use App\Jobs\ExpireUnpaidOrder;
+use App\Jobs\ProcessXenditCallback;
 use App\Models\Order;
 use App\Models\Payment;
 use Carbon\Carbon;
@@ -105,6 +106,53 @@ class PaymentService
             ]);
 
             return null;
+        }
+    }
+
+    /**
+     * Actively reconcile a pending Xendit invoice directly with Xendit API.
+     * Useful when the customer returns from Xendit before/without webhook delivery.
+     */
+    public function syncPaymentStatus(Order $order): bool
+    {
+        $order->loadMissing('payment');
+
+        if ($order->status !== OrderStatus::PendingPayment) {
+            return false;
+        }
+
+        $payment = $order->payment;
+        if (!$payment || $payment->payment_method !== PaymentMethod::Xendit || empty($payment->xendit_invoice_id)) {
+            return false;
+        }
+
+        if (!method_exists($this->paymentGateway, 'getInvoice')) {
+            return false;
+        }
+
+        try {
+            $invoice = $this->paymentGateway->getInvoice($payment->xendit_invoice_id);
+            if (!is_array($invoice)) {
+                return false;
+            }
+
+            $status = strtoupper((string) ($invoice['status'] ?? ''));
+            if (!in_array($status, ['PAID', 'SETTLED', 'SUCCEEDED'], true)) {
+                return false;
+            }
+
+            $parsed = $this->paymentGateway->parseCallback($invoice);
+            if (empty($parsed['order_id'])) {
+                $parsed['order_id'] = $order->id;
+            }
+
+            ProcessXenditCallback::dispatchSync($parsed);
+
+            return true;
+        } catch (Exception $e) {
+            Log::warning("Failed to sync Xendit invoice status for order [{$order->id}]: " . $e->getMessage());
+
+            return false;
         }
     }
 }
