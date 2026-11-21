@@ -63,7 +63,7 @@
                         <legend class="visually-hidden">Pilih metode pembayaran</legend>
                         <label class="payment-method-option">
                             <input type="radio" name="payment_method" value="xendit" required @checked(old('payment_method', 'xendit') === 'xendit')>
-                            <span><strong>Bayar online</strong><small>Pembayaran aman melalui Xendit.</small></span>
+                            <span><strong>Bayar online (QRIS)</strong><small>Pembayaran instan via QRIS melalui Xendit.</small></span>
                         </label>
                         <label class="payment-method-option">
                             <input type="radio" name="payment_method" value="cod" required @checked(old('payment_method') === 'cod')>

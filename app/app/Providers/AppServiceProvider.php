@@ -6,6 +6,7 @@ use App\Adapters\Payment\PaymentGatewayInterface;
 use App\Adapters\Payment\XenditAdapter;
 use App\Adapters\Shipping\ManualShippingAdapter;
 use App\Adapters\Shipping\ShippingProviderInterface;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -24,6 +25,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        if (request()->header('x-forwarded-proto') === 'https') {
+            URL::forceScheme('https');
+        }
     }
 }

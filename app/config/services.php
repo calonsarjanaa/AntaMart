@@ -32,9 +32,13 @@ return [
     ],
 
     'xendit' => [
-        'secret_key'    => env('XENDIT_SECRET_KEY'),
-        'webhook_token' => env('XENDIT_WEBHOOK_TOKEN'),
-        'base_url'      => env('XENDIT_BASE_URL', 'https://api.xendit.co'),
+        'secret_key'      => env('XENDIT_SECRET_KEY'),
+        'webhook_token'   => env('XENDIT_WEBHOOK_TOKEN'),
+        'base_url'        => env('XENDIT_BASE_URL', 'https://api.xendit.co'),
+        'payment_methods' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('XENDIT_PAYMENT_METHODS', 'QRIS'))
+        ))),
     ],
 
 ];

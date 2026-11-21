@@ -37,7 +37,8 @@ test('createInvoice sends correct payload to Xendit API and returns session deta
             && $request['amount'] === 250000
             && $request['payer_email'] === 'customer@example.com'
             && $request['invoice_duration'] === 900 // 15 minutes per FR-PAY-002
-            && $request['currency'] === 'IDR';
+            && $request['currency'] === 'IDR'
+            && $request['payment_methods'] === ['QRIS'];
     });
 });
 
@@ -56,5 +57,28 @@ test('createInvoice throws RuntimeException when Xendit API responds with error'
 
     expect(fn () => $adapter->createInvoice('order-1', 100, 'test@test.com'))
         ->toThrow(RuntimeException::class, 'Xendit invoice creation failed: Invalid amount');
+});
+
+test('getInvoice fetches invoice status from Xendit API', function () {
+    Http::fake([
+        'https://api.xendit.co/v2/invoices/inv_xendit_12345' => Http::response([
+            'id'          => 'inv_xendit_12345',
+            'external_id' => '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+            'status'      => 'PAID',
+            'amount'      => 5000,
+            'paid_amount' => 5000,
+        ], 200),
+    ]);
+
+    $adapter = new XenditAdapter(
+        secretKey: 'xnd_test_secret_key_123',
+        baseUrl: 'https://api.xendit.co'
+    );
+
+    $invoice = $adapter->getInvoice('inv_xendit_12345');
+
+    expect($invoice)->not->toBeNull()
+        ->and($invoice['status'])->toBe('PAID')
+        ->and($invoice['paid_amount'])->toBe(5000);
 });
 
