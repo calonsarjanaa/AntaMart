@@ -43,6 +43,8 @@ Route::post('/checkout/payment/cancel', [BrowserCheckoutController::class, 'canc
 Route::post('/checkout/payment/dev-simulate', [BrowserCheckoutController::class, 'devSimulatePayment'])->name('storefront.checkout.payment.dev-simulate');
 Route::get('/checkout/result/{orderId}', [BrowserCheckoutController::class, 'result'])->middleware('signed')->name('storefront.checkout.result');
 Route::post('/checkout/result/{orderId}/retry', [BrowserCheckoutController::class, 'retryResultPayment'])->middleware('signed')->name('storefront.checkout.result.retry');
+Route::post('/checkout/result/{orderId}/switch-cod', [BrowserCheckoutController::class, 'switchResultToCod'])->middleware('signed')->name('storefront.checkout.result.switch-cod');
+Route::post('/checkout/result/{orderId}/cancel', [BrowserCheckoutController::class, 'cancelResultPending'])->middleware('signed')->name('storefront.checkout.result.cancel');
 Route::get('/orders/track', [BrowserGuestOrderTrackingController::class, 'index'])->name('storefront.orders.track');
 Route::post('/orders/track', [BrowserGuestOrderTrackingController::class, 'store'])->middleware('throttle:10,1')->name('storefront.orders.track.lookup');
 Route::post('/orders/{id}/cancellation-requests', [BrowserGuestCancellationController::class, 'store'])

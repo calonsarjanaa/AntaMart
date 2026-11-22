@@ -86,6 +86,20 @@
                         @else
                             <p class="order-result-note">Batas waktu pembayaran telah lewat. Muat ulang halaman ini untuk melihat status terbaru.</p>
                         @endif
+
+                        @if ($paymentMethod === 'xendit' && (!$order->expires_at || $order->expires_at->isFuture()))
+                            <div class="order-result-secondary-actions" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px;">
+                                <form method="post" action="{{ $switchCodUrl }}" style="margin: 0;">
+                                    @csrf
+                                    <button class="button button-secondary" type="submit">Beralih ke Bayar di Tempat (COD)</button>
+                                </form>
+                                <form method="post" action="{{ $cancelUrl }}" style="margin: 0;" onsubmit="return confirm('Batalkan pesanan ini dan kembalikan produk ke keranjang?');">
+                                    @csrf
+                                    <button class="button button-danger" type="submit">Batalkan Pesanan</button>
+                                </form>
+                            </div>
+                        @endif
+
                         <a class="order-result-refresh" href="{{ request()->fullUrl() }}">Muat ulang status</a>
                     @endif
                 </section>
