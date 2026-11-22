@@ -22,8 +22,11 @@ class CheckoutService
 {
     public function __construct(
         protected InventoryService $inventoryService,
-        protected ShippingProviderInterface $shippingProvider
-    ) {}
+        protected ShippingProviderInterface $shippingProvider,
+        protected ?OrderExpiryService $orderExpiryService = null
+    ) {
+        $this->orderExpiryService = $orderExpiryService ?? app(OrderExpiryService::class);
+    }
 
     /**
      * Process checkout and create an order with stock reservations.
@@ -74,6 +77,10 @@ class CheckoutService
         }
 
         $variantIds = array_column($itemsData, 'product_variant_id');
+
+        // Lazy expiration fallback: free stock from abandoned overdue orders if background worker is delayed/stopped
+        $this->orderExpiryService->expirePastDueForVariants($variantIds);
+
         $variants = ProductVariant::with('product')
             ->whereIn('id', $variantIds)
             ->where('is_active', true)

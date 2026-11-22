@@ -88,3 +88,61 @@ test('expiry job does not expire an order whose payment is already paid', functi
         ->and($this->reservation->fresh()->status)->toBe('reserved')
         ->and($this->variant->fresh()->stock_reserved)->toBe(2);
 });
+
+test('orders:expire-unpaid command sweeps overdue orders and releases reserved stock', function () {
+    $this->artisan('orders:expire-unpaid')
+        ->expectsOutput('Expired 1 overdue unpaid order(s).')
+        ->assertExitCode(0);
+
+    expect($this->order->fresh()->status)->toBe(OrderStatus::Expired)
+        ->and($this->payment->fresh()->status)->toBe(PaymentStatus::Expired)
+        ->and($this->reservation->fresh()->status)->toBe('released')
+        ->and($this->variant->fresh()->stock_reserved)->toBe(0);
+});
+
+test('checkout lazily expires abandoned overdue orders holding stock for the same variant', function () {
+    // Only 2 units physically exist, both currently held by the expired order from beforeEach
+    $this->variant->update([
+        'stock_physical' => 2,
+        'stock_reserved' => 2,
+    ]);
+
+    $response = $this->postJson('/api/checkout', [
+        'idempotency_key' => 'lazy-expiry-checkout-key',
+        'guest_email'     => 'newbuyer@example.com',
+        'guest_phone'     => '081299998888',
+        'payment_method'  => 'xendit',
+        'items'           => [
+            ['product_variant_id' => $this->variant->id, 'quantity' => 2],
+        ],
+        'shipping_address' => [
+            'recipient_name' => 'New Buyer',
+            'phone'          => '081299998888',
+            'address_line1'  => 'Jl. Merdeka No. 1',
+            'city'           => 'Jakarta',
+            'province'       => 'DKI Jakarta',
+            'postal_code'    => '10110',
+        ],
+    ]);
+
+    $response->assertStatus(201);
+
+    // Old abandoned order is expired and released; new order holds the 2 reserved units
+    expect($this->order->fresh()->status)->toBe(OrderStatus::Expired)
+        ->and($this->reservation->fresh()->status)->toBe('released')
+        ->and($this->variant->fresh()->stock_reserved)->toBe(2);
+});
+
+test('viewing checkout result page lazily expires overdue unpaid order', function () {
+    $resultUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+        'storefront.checkout.result',
+        now()->addDays(1),
+        ['orderId' => $this->order->id]
+    );
+
+    $response = $this->get($resultUrl);
+
+    $response->assertOk();
+    expect($this->order->fresh()->status)->toBe(OrderStatus::Expired)
+        ->and($this->variant->fresh()->stock_reserved)->toBe(0);
+});

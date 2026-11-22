@@ -6,6 +6,7 @@ use App\Enums\CancellationStatus;
 use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Services\CancellationService;
+use App\Services\OrderExpiryService;
 use Illuminate\Http\Request;
 
 class CustomerOrderController extends Controller
@@ -21,13 +22,17 @@ class CustomerOrderController extends Controller
         return view('storefront.account.orders.index', compact('orders'));
     }
 
-    public function show(Request $request, string $orderId)
+    public function show(Request $request, string $orderId, OrderExpiryService $orderExpiryService)
     {
         $user = $request->user('web');
         $order = $user->orders()
             ->with(['items', 'address', 'payment', 'shipment', 'refund', 'latestCancellationRequest'])
             ->whereKey($orderId)
             ->firstOrFail();
+
+        if ($orderExpiryService->expireOrder($order)) {
+            $order->refresh()->load(['items', 'address', 'payment', 'shipment', 'refund', 'latestCancellationRequest']);
+        }
 
         $pendingCancellation = $order->cancellationRequests()
             ->where('status', CancellationStatus::Pending->value)

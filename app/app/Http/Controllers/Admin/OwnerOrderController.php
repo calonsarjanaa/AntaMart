@@ -6,14 +6,17 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Services\OrderExpiryService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 
 class OwnerOrderController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, OrderExpiryService $orderExpiryService)
     {
+        $orderExpiryService->expireAllPastDue(20);
+
         $orderStatuses = collect(OrderStatus::cases())->map(fn (OrderStatus $status) => $status->value)->all();
         $paymentStatuses = collect(PaymentStatus::cases())->map(fn (PaymentStatus $status) => $status->value)->all();
 
@@ -57,12 +60,16 @@ class OwnerOrderController extends Controller
         ]);
     }
 
-    public function show(string $orderId)
+    public function show(string $orderId, OrderExpiryService $orderExpiryService)
     {
         $order = Order::query()
             ->with(['customer', 'items', 'address', 'payment', 'shipment', 'refund.refundedBy', 'latestCancellationRequest'])
             ->whereKey($orderId)
             ->firstOrFail();
+
+        if ($orderExpiryService->expireOrder($order)) {
+            $order->refresh()->load(['customer', 'items', 'address', 'payment', 'shipment', 'refund.refundedBy', 'latestCancellationRequest']);
+        }
 
         $convertedQuantities = $order->reservations()
             ->where('status', 'converted')
