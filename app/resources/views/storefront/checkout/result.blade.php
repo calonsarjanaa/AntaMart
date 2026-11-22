@@ -92,63 +92,12 @@
                         </x-alert>
                     @endif
 
-                    @if ($orderStatus === 'awaiting_confirmation')
-                        <div class="order-result-secondary-actions" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; align-items: flex-start;">
-                            @if (!empty($storeWhatsApp))
-                                <a
-                                    class="button"
-                                    href="{{ $storeWhatsApp['url'] }}"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    style="display: inline-flex; align-items: center; gap: 8px; background: #16a34a; border-color: #16a34a; color: #ffffff; text-decoration: none;"
-                                >
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/>
-                                    </svg>
-                                    <span>{{ $storeWhatsApp['label'] }}</span>
-                                </a>
-                            @endif
-                        </div>
-                        <form method="post" action="{{ $cancelUrl }}" style="margin-top: 14px;" onsubmit="return confirm('Batalkan pesanan ini dan kembalikan produk ke keranjang?');">
-                            @csrf
-                            <div class="form-field" style="margin-bottom: 8px;">
-                                <label class="field-label" for="result-cancel-reason-awaiting">Alasan pembatalan <span class="required-mark" aria-hidden="true">*</span></label>
-                                <input id="result-cancel-reason-awaiting" name="reason" type="text" class="field-input" maxlength="2000" placeholder="Contoh: Ingin mengubah jumlah atau produk" required value="{{ old('reason') }}">
-                            </div>
-                            <button class="button button-danger" type="submit">Batalkan Pesanan</button>
-                        </form>
-                        <a class="order-result-refresh" href="{{ request()->fullUrl() }}">Muat ulang status</a>
-                    @elseif ($orderStatus === 'pending_payment')
+                    @if ($orderStatus === 'pending_payment')
                         @if ($order->payment?->xendit_payment_url && $order->expires_at?->isFuture())
-                            <a class="button button-primary order-result-action" href="{{ $payUrl }}">Bayar Pesanan</a>
                             <p class="order-result-note">Batas pembayaran: {{ $order->expires_at->timezone(config('app.timezone'))->format('d M Y, H:i') }}.</p>
-                        @elseif (!$order->expires_at)
-                            <form method="post" action="{{ $retryUrl }}">
-                                @csrf
-                                <button class="button button-primary order-result-action" type="submit">Coba buat tautan pembayaran lagi</button>
-                            </form>
-                        @else
+                        @elseif ($order->expires_at && $order->expires_at->isPast())
                             <p class="order-result-note">Batas waktu pembayaran telah lewat. Muat ulang halaman ini untuk melihat status terbaru.</p>
                         @endif
-
-                        @if ($paymentMethod === 'xendit' && (!$order->expires_at || $order->expires_at->isFuture()))
-                            <div class="order-result-secondary-actions" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px;">
-                                <form method="post" action="{{ $switchCodUrl }}" style="margin: 0;">
-                                    @csrf
-                                    <button class="button button-secondary" type="submit">Beralih ke Bayar di Tempat (COD)</button>
-                                </form>
-                            </div>
-                            <form method="post" action="{{ $cancelUrl }}" style="margin-top: 14px;" onsubmit="return confirm('Batalkan pesanan ini dan kembalikan produk ke keranjang?');">
-                                @csrf
-                                <div class="form-field" style="margin-bottom: 8px;">
-                                    <label class="field-label" for="result-cancel-reason-pending">Alasan pembatalan <span class="required-mark" aria-hidden="true">*</span></label>
-                                    <input id="result-cancel-reason-pending" name="reason" type="text" class="field-input" maxlength="2000" placeholder="Contoh: Berubah pikiran" required value="{{ old('reason') }}">
-                                </div>
-                                <button class="button button-danger" type="submit">Batalkan Pesanan</button>
-                            </form>
-                        @endif
-
-                        <a class="order-result-refresh" href="{{ request()->fullUrl() }}">Muat ulang status</a>
                     @endif
                 </section>
 
@@ -185,7 +134,74 @@
                 @if ($order->refund)
                     <div><span>Status pengembalian dana</span><x-status-badge :status="$order->refund->status->value" /></div>
                 @endif
+
+                @if (in_array($orderStatus, ['awaiting_confirmation', 'pending_payment'], true))
+                    <hr>
+                    <h3>Aksi pesanan</h3>
+                    <div class="sidebar-actions">
+                        @if ($orderStatus === 'awaiting_confirmation')
+                            @if (!empty($storeWhatsApp))
+                                <a
+                                    class="button"
+                                    href="{{ $storeWhatsApp['url'] }}"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style="background: #16a34a; border-color: #16a34a; color: #ffffff; text-decoration: none;"
+                                >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/>
+                                    </svg>
+                                    <span>{{ $storeWhatsApp['label'] }}</span>
+                                </a>
+                            @endif
+                            <button class="button button-danger" type="button" data-open-modal="modal-result-cancel">Batalkan Pesanan</button>
+                            <a class="order-result-refresh" href="{{ request()->fullUrl() }}">Muat ulang status</a>
+                        @elseif ($orderStatus === 'pending_payment')
+                            @if ($order->payment?->xendit_payment_url && $order->expires_at?->isFuture())
+                                <a class="button button-primary" href="{{ $payUrl }}">Bayar Pesanan</a>
+                            @elseif (!$order->expires_at)
+                                <form method="post" action="{{ $retryUrl }}">
+                                    @csrf
+                                    <button class="button button-primary" type="submit">Coba buat tautan pembayaran lagi</button>
+                                </form>
+                            @endif
+
+                            @if ($paymentMethod === 'xendit' && (!$order->expires_at || $order->expires_at->isFuture()))
+                                <form method="post" action="{{ $switchCodUrl }}" onsubmit="return confirm('Alihkan metode pembayaran pesanan ini ke Bayar di Tempat (COD)?');">
+                                    @csrf
+                                    <button class="button button-secondary" type="submit">Beralih ke Bayar di Tempat (COD)</button>
+                                </form>
+                                <button class="button button-danger" type="button" data-open-modal="modal-result-cancel">Batalkan Pesanan</button>
+                            @endif
+                            <a class="order-result-refresh" href="{{ request()->fullUrl() }}">Muat ulang status</a>
+                        @endif
+                    </div>
+                @endif
             </aside>
         </div>
+
+        @if (in_array($orderStatus, ['awaiting_confirmation', 'pending_payment'], true))
+            <dialog id="modal-result-cancel" class="action-modal" aria-labelledby="modal-result-cancel-title">
+                <div class="action-modal-header">
+                    <h3 id="modal-result-cancel-title">Batalkan Pesanan</h3>
+                    <button type="button" class="action-modal-close" data-close-modal aria-label="Tutup">&times;</button>
+                </div>
+                <form method="post" action="{{ $cancelUrl }}">
+                    @csrf
+                    <div class="action-modal-body">
+                        <p>Pesanan yang belum dibayar akan langsung dibatalkan, cadangan stok dilepaskan, dan produk dikembalikan ke keranjang Anda.</p>
+                        <div class="form-field">
+                            <label class="field-label" for="modal-result-cancel-reason">Alasan pembatalan <span class="required-mark" aria-hidden="true">*</span></label>
+                            <textarea id="modal-result-cancel-reason" name="reason" maxlength="2000" placeholder="Contoh: Ingin mengubah jumlah atau produk" required>{{ old('reason') }}</textarea>
+                            @error('reason')<p class="field-error">{{ $message }}</p>@enderror
+                        </div>
+                    </div>
+                    <div class="action-modal-footer">
+                        <button type="button" class="button button-secondary" data-close-modal>Batal</button>
+                        <button type="submit" class="button button-danger">Konfirmasi Pembatalan</button>
+                    </div>
+                </form>
+            </dialog>
+        @endif
     </section>
 @endsection

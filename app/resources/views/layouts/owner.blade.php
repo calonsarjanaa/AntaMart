@@ -13,7 +13,12 @@
     <header class="owner-site-header">
         <div class="owner-header-inner">
             <a class="wordmark" href="{{ auth('web')->user()?->isStoreOwner() ? route('owner.dashboard') : route('owner.login') }}" aria-label="Console AntaMart">
-                <span class="wordmark-mark" aria-hidden="true">A</span>
+                <span class="wordmark-mark" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3.5" y="5.5" width="17" height="15" rx="3.5"/>
+                        <path d="M8.5 9.5a3.5 3.5 0 0 0 7 0"/>
+                    </svg>
+                </span>
                 <span>AntaMart <small>Console</small></span>
             </a>
             @if (auth('web')->user()?->isStoreOwner())
@@ -51,5 +56,24 @@
         @yield('content')
     </main>
     <footer class="owner-footer"><a href="{{ route('storefront.home') }}">← Buka storefront</a><span>AntaMart · Console toko</span></footer>
+    <script>
+        document.addEventListener('click', function (e) {
+            const opener = e.target.closest('[data-open-modal]');
+            if (opener) {
+                const dialog = document.getElementById(opener.getAttribute('data-open-modal'));
+                if (dialog && typeof dialog.showModal === 'function') dialog.showModal();
+                return;
+            }
+            const closer = e.target.closest('[data-close-modal]');
+            if (closer) {
+                const dialog = closer.closest('dialog');
+                if (dialog) dialog.close();
+                return;
+            }
+            if (e.target.tagName === 'DIALOG' && e.target.classList.contains('action-modal')) {
+                e.target.close();
+            }
+        });
+    </script>
 </body>
 </html>

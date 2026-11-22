@@ -154,7 +154,7 @@
                                             <textarea id="cancellation-reason" name="reason" class="field-input cancellation-reason-input @error('reason') field-input-invalid @enderror" maxlength="2000" required @error('reason') aria-invalid="true" aria-describedby="cancellation-reason-error" @enderror>{{ old('reason') }}</textarea>
                                             @error('reason')<p class="field-error" id="cancellation-reason-error">{{ $message }}</p>@enderror
                                         </div>
-                                        <button class="button button-primary" type="submit">{{ $canDirectCancel ? 'Batalkan pesanan' : 'Kirim permintaan pembatalan' }}</button>
+                                        <button class="button button-danger" type="submit">{{ $canDirectCancel ? 'Batalkan pesanan' : 'Kirim permintaan pembatalan' }}</button>
                                     </form>
                                 @endif
                             @elseif (in_array($orderStatus, ['processing', 'shipped'], true) && $cancellationAttempts >= $maxCancellationAttempts)

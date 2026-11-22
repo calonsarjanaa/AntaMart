@@ -117,7 +117,7 @@
                 <a class="filter-chip {{ $categoryFilter === $category->slug ? 'is-active' : '' }} {{ $category->isAgeRestricted() ? 'chip-age-restricted' : '' }}"
                    href="{{ route('storefront.home', array_filter(['q' => $search, 'availability' => $availability === 'all' ? null : $availability, 'category' => $category->slug])) }}"
                    @if ($categoryFilter === $category->slug) aria-current="page" @endif>
-                    {{ $category->name }}
+                    {{ $category->isAgeRestricted() ? trim(str_ireplace("{$category->min_age}+", '', $category->name)) : $category->name }}
                     @if ($category->isAgeRestricted())
                         <span class="badge-age-limit" aria-label="Batas usia {{ $category->min_age }} tahun">{{ $category->min_age }}+</span>
                     @endif

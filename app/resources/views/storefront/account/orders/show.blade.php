@@ -29,22 +29,8 @@
                     @endif
                     @if ($order->status->value === 'awaiting_confirmation')
                         <p class="tracking-status-copy">Pesanan menunggu konfirmasi ketersediaan stok dari toko. Tombol pembayaran akan aktif setelah toko menerima pesanan Anda.</p>
-                        @if (!empty($storeWhatsApp))
-                            <a
-                                class="button"
-                                href="{{ $storeWhatsApp['url'] }}"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style="display: inline-flex; align-items: center; gap: 8px; margin-top: 10px; background: #16a34a; border-color: #16a34a; color: #ffffff; text-decoration: none;"
-                            >
-                                <span>{{ $storeWhatsApp['label'] }}</span>
-                            </a>
-                        @endif
                     @elseif ($order->status->value === 'pending_payment')
-                        <p class="tracking-status-copy">Pesanan menunggu konfirmasi pembayaran.</p>
-                        @if ($order->payment?->xendit_payment_url && $order->expires_at?->isFuture())
-                            <a class="button button-primary order-result-action" href="{{ route('storefront.account.orders.pay', $order->id) }}" style="margin-top: 10px;">Bayar Pesanan</a>
-                        @endif
+                        <p class="tracking-status-copy">Pesanan menunggu konfirmasi pembayaran. Klik <strong>Bayar Pesanan</strong> di panel kanan untuk menyelesaikan pembayaran QRIS.</p>
                     @elseif ($order->status->value === 'cancelled' && $order->rejection_reason)
                         <x-alert tone="error" class="order-result-alert">
                             <strong>Pesanan ditolak oleh toko:</strong> {{ $order->rejection_reason }}
@@ -116,9 +102,9 @@
                     </section>
                 @endif
 
-                @if ($order->latestCancellationRequest || $canRequestCancellation || in_array($order->status->value, ['processing', 'shipped'], true))
+                @if ($cancellationToDisplay || (in_array($order->status->value, ['processing', 'shipped'], true) && $cancellationAttempts >= $maxCancellationAttempts))
                     <section class="checkout-form-section tracking-cancellation-panel" aria-labelledby="customer-order-cancellation-title">
-                        <h2 id="customer-order-cancellation-title">{{ $canDirectCancel ? 'Batalkan pesanan' : 'Permintaan pembatalan' }}</h2>
+                        <h2 id="customer-order-cancellation-title">Status pembatalan</h2>
                         @if ($cancellationToDisplay)
                             <div class="cancellation-request-summary"><span>Status</span><x-status-badge :status="$cancellationToDisplay->status->value" /></div>
                             <p>{{ $cancellationToDisplay->reason }}</p>
@@ -126,29 +112,7 @@
                                 <p>Catatan toko: {{ $cancellationToDisplay->rejection_reason }}</p>
                             @endif
                         @endif
-
-                        @if ($canWithdrawCancellation)
-                            <p>Permintaan menunggu tinjauan dan dapat ditarik sebelum toko membuat keputusan.</p>
-                            <form class="cancellation-action-form" method="post" action="{{ route('storefront.account.orders.cancellation.withdraw', [$order->id, $pendingCancellation->id]) }}">
-                                @csrf
-                                <button class="button button-secondary" type="submit">Tarik permintaan</button>
-                            </form>
-                        @elseif ($canRequestCancellation)
-                            @if ($canDirectCancel)
-                                <p>Pesanan belum dibayar dan dapat dibatalkan langsung tanpa persetujuan toko.</p>
-                            @else
-                                <p>Permintaan pembatalan akan ditinjau oleh toko (pengajuan {{ $cancellationAttempts }} dari {{ $maxCancellationAttempts }}). Jika disetujui pada pesanan yang sudah dibayar, pengembalian dana diproses di luar aplikasi.</p>
-                            @endif
-                            <form class="cancellation-action-form" method="post" action="{{ route('storefront.account.orders.cancellation.store', $order->id) }}">
-                                @csrf
-                                <div class="form-field">
-                                    <label class="field-label" for="customer-cancellation-reason">Alasan pembatalan <span class="required-mark" aria-hidden="true">*</span></label>
-                                    <textarea id="customer-cancellation-reason" name="reason" class="field-input cancellation-reason-input @error('reason') field-input-invalid @enderror" maxlength="2000" required @error('reason') aria-invalid="true" aria-describedby="customer-cancellation-reason-error" @enderror>{{ old('reason') }}</textarea>
-                                    @error('reason')<p class="field-error" id="customer-cancellation-reason-error">{{ $message }}</p>@enderror
-                                </div>
-                                <button class="button button-primary" type="submit">{{ $canDirectCancel ? 'Batalkan pesanan' : 'Kirim permintaan pembatalan' }}</button>
-                            </form>
-                        @elseif (in_array($order->status->value, ['processing', 'shipped'], true) && $cancellationAttempts >= $maxCancellationAttempts)
+                        @if (in_array($order->status->value, ['processing', 'shipped'], true) && $cancellationAttempts >= $maxCancellationAttempts)
                             <p class="tracking-status-copy">Batas maksimal pengajuan pembatalan ({{ $maxCancellationAttempts }} kali) untuk pesanan ini telah tercapai.</p>
                         @endif
                     </section>
@@ -156,13 +120,78 @@
             </div>
 
             <aside class="checkout-form-section order-result-meta customer-order-summary">
-                <h2>Ringkasan</h2>
+                <h2>Informasi pesanan</h2>
                 <div><span>Nomor pesanan</span><strong>{{ $order->id }}</strong></div>
                 <div><span>Tanggal</span><strong>{{ $order->created_at?->timezone(config('app.timezone'))->format('d M Y, H:i') }}</strong></div>
                 @if ($order->payment?->paid_at)<div><span>Dibayar</span><strong>{{ $order->payment->paid_at->timezone(config('app.timezone'))->format('d M Y, H:i') }}</strong></div>@endif
                 @if ($order->expires_at && $order->status->value === 'pending_payment')<div><span>Batas pembayaran</span><strong>{{ $order->expires_at->timezone(config('app.timezone'))->format('d M Y, H:i') }}</strong></div>@endif
                 @if ($order->shipment?->tracking_number)<div><span>Nomor resi</span><strong>{{ $order->shipment->tracking_number }}</strong></div>@endif
+
+                @php
+                    $hasPayAction = $order->status->value === 'pending_payment' && $order->payment?->xendit_payment_url && $order->expires_at?->isFuture();
+                    $hasStoreWaAction = $order->status->value === 'awaiting_confirmation' && !empty($storeWhatsApp);
+                    $hasAnyCustomerAction = $hasPayAction || $hasStoreWaAction || $canWithdrawCancellation || $canRequestCancellation;
+                @endphp
+
+                @if ($hasAnyCustomerAction)
+                    <hr>
+                    <h3>Aksi pesanan</h3>
+                    <div class="sidebar-actions">
+                        @if ($hasPayAction)
+                            <a class="button button-primary" href="{{ route('storefront.account.orders.pay', $order->id) }}">Bayar Pesanan</a>
+                        @endif
+                        @if ($hasStoreWaAction)
+                            <a
+                                class="button"
+                                href="{{ $storeWhatsApp['url'] }}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style="background: #16a34a; border-color: #16a34a; color: #ffffff; text-decoration: none;"
+                            >
+                                <span>{{ $storeWhatsApp['label'] }}</span>
+                            </a>
+                        @endif
+                        @if ($canWithdrawCancellation)
+                            <form method="post" action="{{ route('storefront.account.orders.cancellation.withdraw', [$order->id, $pendingCancellation->id]) }}">
+                                @csrf
+                                <button class="button button-secondary" type="submit">Tarik permintaan</button>
+                            </form>
+                        @elseif ($canRequestCancellation)
+                            <button class="button button-danger" type="button" data-open-modal="modal-customer-cancel">
+                                {{ $canDirectCancel ? 'Batalkan pesanan' : 'Ajukan pembatalan' }}
+                            </button>
+                        @endif
+                    </div>
+                @endif
             </aside>
         </div>
+
+        @if ($canRequestCancellation && !$canWithdrawCancellation)
+            <dialog id="modal-customer-cancel" class="action-modal" aria-labelledby="modal-customer-cancel-title">
+                <div class="action-modal-header">
+                    <h3 id="modal-customer-cancel-title">{{ $canDirectCancel ? 'Batalkan Pesanan' : 'Ajukan Pembatalan Pesanan' }}</h3>
+                    <button type="button" class="action-modal-close" data-close-modal aria-label="Tutup">&times;</button>
+                </div>
+                <form method="post" action="{{ route('storefront.account.orders.cancellation.store', $order->id) }}">
+                    @csrf
+                    <div class="action-modal-body">
+                        @if ($canDirectCancel)
+                            <p>Pesanan belum dibayar dan dapat dibatalkan langsung tanpa persetujuan toko.</p>
+                        @else
+                            <p>Permintaan pembatalan akan ditinjau oleh toko (pengajuan {{ $cancellationAttempts }} dari {{ $maxCancellationAttempts }}). Jika disetujui pada pesanan yang sudah dibayar, pengembalian dana diproses di luar aplikasi.</p>
+                        @endif
+                        <div class="form-field">
+                            <label class="field-label" for="customer-cancellation-reason">Alasan pembatalan <span class="required-mark" aria-hidden="true">*</span></label>
+                            <textarea id="customer-cancellation-reason" name="reason" maxlength="2000" required>{{ old('reason') }}</textarea>
+                            @error('reason')<p class="field-error">{{ $message }}</p>@enderror
+                        </div>
+                    </div>
+                    <div class="action-modal-footer">
+                        <button type="button" class="button button-secondary" data-close-modal>Batal</button>
+                        <button type="submit" class="button button-danger">{{ $canDirectCancel ? 'Konfirmasi Pembatalan' : 'Kirim Permintaan' }}</button>
+                    </div>
+                </form>
+            </dialog>
+        @endif
     </section>
 @endsection
