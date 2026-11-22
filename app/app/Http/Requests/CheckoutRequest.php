@@ -38,6 +38,7 @@ class CheckoutRequest extends FormRequest
             'shipping_address.country'        => ['nullable', 'string', 'max:10'],
             'shipping_method'                 => ['nullable', 'string', 'max:50'],
             'payment_method'                  => ['sometimes', Rule::enum(PaymentMethod::class)],
+            'birth_date'                      => ['nullable', 'date', 'before_or_equal:today'],
         ];
     }
 }

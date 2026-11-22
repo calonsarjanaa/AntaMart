@@ -13,6 +13,10 @@ class ProductCatalogController extends Controller
     {
         $products = Product::query()
             ->where('is_active', true)
+            ->where(function ($query): void {
+                $query->whereNull('category_id')
+                    ->orWhereHas('category', fn ($cat) => $cat->whereNull('min_age')->orWhere('min_age', '<=', 0));
+            })
             ->whereHas('variants', fn ($query) => $query->where('is_active', true))
             ->with(['variants' => fn ($query) => $query->where('is_active', true)->orderBy('name')])
             ->orderBy('sort_order')

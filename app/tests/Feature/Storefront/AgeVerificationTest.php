@@ -144,3 +144,80 @@ test('unverified user accessing rokok product detail is redirected to verify wit
         ->assertSee('Cerutu Premium Nusantara');
 });
 
+test('unverified user cannot add rokok product directly to cart via POST', function () {
+    $rokokVariant = $this->rokokProduct->variants()->firstOrFail();
+
+    $response = $this->post(route('storefront.cart.items.store'), [
+        'product_variant_id' => $rokokVariant->id,
+        'quantity' => 1,
+    ]);
+
+    $response->assertRedirect(route('storefront.age-verification.show', [
+        'category' => 'rokok-21-plus',
+        'return_url' => route('storefront.products.show', $this->rokokProduct->slug),
+    ]));
+    expect(session('cart', []))->toBeEmpty();
+});
+
+test('api checkout rejects rokok product without valid 21+ birth_date and allows 21+', function () {
+    $rokokVariant = $this->rokokProduct->variants()->firstOrFail();
+
+    $basePayload = [
+        'idempotency_key' => 'api-rokok-check-1',
+        'guest_email'     => 'buyer@example.com',
+        'guest_phone'     => '081234567890',
+        'payment_method'  => 'cod',
+        'items'           => [
+            ['product_variant_id' => $rokokVariant->id, 'quantity' => 1],
+        ],
+        'shipping_address' => [
+            'recipient_name' => 'Buyer',
+            'phone'          => '081234567890',
+            'address_line1'  => 'Jl. Sudirman No. 1',
+            'city'           => 'Jakarta',
+            'province'       => 'DKI Jakarta',
+            'postal_code'    => '10220',
+        ],
+    ];
+
+    // 1. Missing birth_date -> 422
+    $this->postJson('/api/checkout', $basePayload)
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['birth_date']);
+
+    // 2. Underage birth_date (17 years old) -> 422
+    $this->postJson('/api/checkout', [
+        ...$basePayload,
+        'idempotency_key' => 'api-rokok-check-2',
+        'birth_date'      => now()->subYears(17)->format('Y-m-d'),
+    ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['birth_date']);
+
+    // 3. Valid 21+ birth_date -> 201
+    $this->postJson('/api/checkout', [
+        ...$basePayload,
+        'idempotency_key' => 'api-rokok-check-3',
+        'birth_date'      => now()->subYears(22)->format('Y-m-d'),
+    ])->assertStatus(201);
+});
+
+test('public api products catalog excludes age-restricted rokok products', function () {
+    $response = $this->getJson('/api/products');
+
+    $response->assertOk()
+        ->assertJsonFragment(['name' => 'Keripik Kentang Renyah'])
+        ->assertJsonMissing(['name' => 'Cerutu Premium Nusantara']);
+});
+
+test('age verification blocks external open redirect return_url', function () {
+    $validBirthDate = now()->subYears(25)->format('Y-m-d');
+
+    $response = $this->post(route('storefront.age-verification.verify', 'rokok-21-plus'), [
+        'birth_date' => $validBirthDate,
+        'return_url' => 'https://evil.example.com/phish',
+    ]);
+
+    $response->assertRedirect(route('storefront.home', ['category' => 'rokok-21-plus']));
+});
+
