@@ -23,9 +23,16 @@
                     @if ($latePayment)
                         <h2 id="order-status-title">Pembayaran diterima setelah pesanan kedaluwarsa</h2>
                         <p>Pembayaran sudah dikonfirmasi, tetapi batas waktu pesanan telah lewat. Tim toko perlu meninjau pengembalian dana secara manual.</p>
+                    @elseif ($orderStatus === 'awaiting_confirmation')
+                        <h2 id="order-status-title">Menunggu konfirmasi toko</h2>
+                        @if ($paymentMethod === 'cod')
+                            <p>Pesanan COD kamu sudah tercatat. Toko sedang memeriksa ketersediaan stok fisik sebelum memproses pesananmu.</p>
+                        @else
+                            <p>Pesanan kamu sudah tercatat. Toko sedang memeriksa ketersediaan stok fisik terlebih dahulu. Setelah pesanan diterima, tombol <strong>Bayar Pesanan (QRIS)</strong> akan aktif di halaman ini.</p>
+                        @endif
                     @elseif ($orderStatus === 'pending_payment')
                         <h2 id="order-status-title">Menunggu konfirmasi pembayaran</h2>
-                        <p>Status ini akan diperbarui setelah sistem menerima konfirmasi dari penyedia pembayaran. Kembali dari halaman pembayaran saja belum berarti pembayaran berhasil.</p>
+                        <p>Pesanan kamu sudah dikonfirmasi tersedia oleh toko! Silakan klik <strong>Bayar Pesanan</strong> untuk menyelesaikan pembayaran QRIS sebelum batas waktu berakhir.</p>
                     @elseif ($orderStatus === 'processing')
                         @if ($paymentMethod === 'cod' && $paymentStatus !== 'paid')
                             <h2 id="order-status-title">Pesanan COD sedang diproses</h2>
@@ -38,8 +45,13 @@
                         <h2 id="order-status-title">Batas waktu pembayaran lewat</h2>
                         <p>Pesanan kedaluwarsa dan reservasi stok telah dilepas. Jika kamu sudah membayar, hubungi toko agar pembayaran dapat diperiksa.</p>
                     @elseif ($orderStatus === 'cancelled')
-                        <h2 id="order-status-title">Pesanan dibatalkan</h2>
-                        <p>Pesanan ini telah dibatalkan. Jika pembayaran sudah dilakukan, proses pengembalian dana ditangani secara manual.</p>
+                        @if ($order->rejection_reason)
+                            <h2 id="order-status-title">Pesanan ditolak oleh toko</h2>
+                            <p>Mohon maaf, pesanan ini tidak dapat diproses oleh toko dan tidak ada dana yang ditarik.</p>
+                        @else
+                            <h2 id="order-status-title">Pesanan dibatalkan</h2>
+                            <p>Pesanan ini telah dibatalkan. Jika pembayaran sudah dilakukan, proses pengembalian dana ditangani secara manual.</p>
+                        @endif
                     @elseif ($orderStatus === 'shipped')
                         <h2 id="order-status-title">Pesanan dikirim</h2>
                         @if ($paymentMethod === 'cod' && $paymentStatus !== 'paid')
@@ -57,7 +69,7 @@
                         <span>Status pembayaran <x-status-badge :status="$paymentStatus ?? 'pending'" /></span>
                     </div>
                     @if ($paymentMethod)
-                        <p class="order-result-note">Metode pembayaran: {{ $paymentMethod === 'cod' ? 'Bayar di tempat (COD)' : 'Xendit' }}</p>
+                        <p class="order-result-note">Metode pembayaran: {{ $paymentMethod === 'cod' ? 'Bayar di tempat (COD)' : 'QRIS' }}</p>
                     @endif
 
                     @if ($latePayment)
@@ -74,9 +86,37 @@
                         <x-alert tone="success" class="order-result-alert">Pengembalian dana manual telah dicatat selesai.</x-alert>
                     @endif
 
-                    @if ($orderStatus === 'pending_payment')
+                    @if ($order->rejection_reason)
+                        <x-alert tone="error" class="order-result-alert">
+                            <strong>Alasan penolakan toko:</strong> {{ $order->rejection_reason }}
+                        </x-alert>
+                    @endif
+
+                    @if ($orderStatus === 'awaiting_confirmation')
+                        <div class="order-result-secondary-actions" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px;">
+                            @if (!empty($storeWhatsApp))
+                                <a
+                                    class="button"
+                                    href="{{ $storeWhatsApp['url'] }}"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style="display: inline-flex; align-items: center; gap: 8px; background: #16a34a; border-color: #16a34a; color: #ffffff; text-decoration: none;"
+                                >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/>
+                                    </svg>
+                                    <span>{{ $storeWhatsApp['label'] }}</span>
+                                </a>
+                            @endif
+                            <form method="post" action="{{ $cancelUrl }}" style="margin: 0;" onsubmit="return confirm('Batalkan pesanan ini dan kembalikan produk ke keranjang?');">
+                                @csrf
+                                <button class="button button-danger" type="submit">Batalkan Pesanan</button>
+                            </form>
+                        </div>
+                        <a class="order-result-refresh" href="{{ request()->fullUrl() }}">Muat ulang status</a>
+                    @elseif ($orderStatus === 'pending_payment')
                         @if ($order->payment?->xendit_payment_url && $order->expires_at?->isFuture())
-                            <a class="button button-primary order-result-action" href="{{ $order->payment->xendit_payment_url }}">Lanjutkan pembayaran</a>
+                            <a class="button button-primary order-result-action" href="{{ $order->payment->xendit_payment_url }}">Bayar Pesanan</a>
                             <p class="order-result-note">Batas pembayaran: {{ $order->expires_at->timezone(config('app.timezone'))->format('d M Y, H:i') }}.</p>
                         @elseif (!$order->expires_at)
                             <form method="post" action="{{ $retryUrl }}">

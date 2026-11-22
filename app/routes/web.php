@@ -87,6 +87,8 @@ Route::middleware(['auth:web', 'role:store_owner'])->prefix('/owner')->name('own
     Route::get('/cancellations', [OwnerCancellationController::class, 'index'])->name('cancellations.index');
     Route::get('/orders', [OwnerOrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{orderId}', [OwnerOrderController::class, 'show'])->name('orders.show');
+    Route::post('/orders/{orderId}/accept', [OwnerOrderController::class, 'accept'])->name('orders.accept');
+    Route::post('/orders/{orderId}/reject', [OwnerOrderController::class, 'reject'])->name('orders.reject');
     Route::post('/orders/{orderId}/cancellation-requests/{requestId}/review', [OwnerCancellationController::class, 'review'])->name('orders.cancellations.review');
     Route::post('/orders/{orderId}/cancel', [OwnerCancellationController::class, 'cancelOrder'])->name('orders.cancel');
     Route::post('/orders/{orderId}/refund/mark-refunded', [OwnerRefundController::class, 'markRefunded'])->name('orders.refund.mark-refunded');

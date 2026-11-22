@@ -164,21 +164,18 @@ class CheckoutService
             $data,
             $paymentMethod
         ) {
-            $expiresAt = $paymentMethod === PaymentMethod::CashOnDelivery ? null : now()->addMinutes(15);
-
-            // FR-TRX-003 & FR-TRX-004 — Create Order with snapshot values
+            // All orders (QRIS & COD) start in awaiting_confirmation so the store owner
+            // can verify physical offline stock before opening payment or processing.
             $order = Order::create([
                 'customer_id'     => $user?->id,
                 'guest_email'     => $guestEmail,
                 'guest_phone'     => $guestPhone,
-                'status'          => $paymentMethod === PaymentMethod::CashOnDelivery
-                    ? OrderStatus::Processing
-                    : OrderStatus::PendingPayment,
+                'status'          => OrderStatus::AwaitingConfirmation,
                 'subtotal'        => $subtotal,
                 'shipping_cost'   => $shippingCost,
                 'total'           => $total,
                 'idempotency_key' => $idempotencyKey,
-                'expires_at'      => $expiresAt,
+                'expires_at'      => null,
             ]);
 
             // FR-TRX-004 — Snapshot product details into order_items
@@ -222,7 +219,7 @@ class CheckoutService
                 'country'        => $addr['country'] ?? 'ID',
             ]);
 
-            // FR-INV-001 & FR-INV-003 — Reserve stock atomically
+            // FR-INV-001 & FR-INV-003 — Reserve stock atomically while awaiting store confirmation
             $this->inventoryService->reserveStock($order, $itemsData);
 
             // Create initial payment tracking record
@@ -231,14 +228,8 @@ class CheckoutService
                 'payment_method' => $paymentMethod,
                 'amount'         => $total,
                 'status'         => PaymentStatus::Pending,
-                'expired_at'     => $expiresAt,
+                'expired_at'     => null,
             ]);
-
-            if ($expiresAt) {
-                ExpireUnpaidOrder::dispatch($order->id)
-                    ->onConnection('database')
-                    ->delay($expiresAt);
-            }
 
             AuditEvent::dispatch(
                 'order.created',
@@ -246,21 +237,11 @@ class CheckoutService
                 $user?->id,
                 $user ? 'customer' : 'guest',
                 [
-                    'total'      => $order->total,
-                    'item_count' => count($preparedItems),
+                    'total'          => $order->total,
+                    'item_count'     => count($preparedItems),
+                    'payment_method' => $paymentMethod->value,
                 ]
             );
-
-            if ($paymentMethod === PaymentMethod::CashOnDelivery) {
-                $this->inventoryService->convertReservationsToPhysicalDeduction($order);
-                AuditEvent::dispatch(
-                    'payment.cod_order_created',
-                    $order->id,
-                    $user?->id,
-                    $user ? 'customer' : 'guest',
-                    ['amount' => $order->total]
-                );
-            }
 
             return $order->load(['items', 'address', 'payment']);
         });

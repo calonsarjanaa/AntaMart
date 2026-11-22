@@ -32,13 +32,18 @@ return [
     ],
 
     'xendit' => [
-        'secret_key'      => env('XENDIT_SECRET_KEY'),
-        'webhook_token'   => env('XENDIT_WEBHOOK_TOKEN'),
-        'base_url'        => env('XENDIT_BASE_URL', 'https://api.xendit.co'),
-        'payment_methods' => array_values(array_filter(array_map(
+        'secret_key'       => env('XENDIT_SECRET_KEY'),
+        'webhook_token'    => env('XENDIT_WEBHOOK_TOKEN'),
+        'base_url'         => env('XENDIT_BASE_URL', 'https://api.xendit.co'),
+        'invoice_duration' => (int) env('XENDIT_INVOICE_DURATION', 3600),
+        'payment_methods'  => array_values(array_filter(array_map(
             'trim',
             explode(',', (string) env('XENDIT_PAYMENT_METHODS', 'QRIS'))
         ))),
+    ],
+
+    'store' => [
+        'whatsapp_number' => env('STORE_WHATSAPP_NUMBER', ''),
     ],
 
 ];

@@ -63,7 +63,11 @@ class WhatsAppNotificationService
         $hasRefund = $order->refund !== null;
         $isLatePayment = $status === OrderStatus::Expired && $order->payment?->status === PaymentStatus::Paid;
 
-        if ($status === OrderStatus::PendingPayment) {
+        if ($status === OrderStatus::AwaitingConfirmation) {
+            return null;
+        }
+
+        if ($status === OrderStatus::PendingPayment && empty($order->payment?->xendit_payment_url)) {
             return null;
         }
 
@@ -144,6 +148,22 @@ class WhatsAppNotificationService
     {
         $extraLines = [];
 
+        if ($order->status === OrderStatus::PendingPayment) {
+            if ($order->payment?->xendit_payment_url) {
+                $extraLines[] = "- Link Bayar QRIS: {$order->payment->xendit_payment_url}";
+            }
+            if ($order->expires_at) {
+                $deadline = $order->expires_at->timezone(config('app.timezone'))->format('d M Y, H:i');
+                $extraLines[] = "- Batas Pembayaran: {$deadline}";
+            }
+
+            return [
+                'Kirim Link Bayar QRIS (WhatsApp)',
+                "Kabar baik! Pesanan Anda di AntaMart telah kami konfirmasi tersedia.\nSilakan selesaikan pembayaran QRIS melalui tautan di bawah ini sebelum batas waktu berakhir.",
+                $extraLines,
+            ];
+        }
+
         if ($order->status === OrderStatus::Processing) {
             if ($isCod && !$isPaid) {
                 return [
@@ -211,10 +231,58 @@ class WhatsAppNotificationService
             ];
         }
 
+        if (!empty($order->rejection_reason)) {
+            $extraLines[] = "- Alasan Penolakan: {$order->rejection_reason}";
+
+            return [
+                'Kirim Info Penolakan (WhatsApp)',
+                'Mohon maaf, pesanan Anda di AntaMart tidak dapat kami proses saat ini.',
+                $extraLines,
+            ];
+        }
+
         return [
             'Kirim Info Pembatalan (WhatsApp)',
             'Informasi dari AntaMart: Pesanan Anda telah dibatalkan.',
             $extraLines,
+        ];
+    }
+
+    /**
+     * Build a WhatsApp link for the customer to contact the store owner about order confirmation.
+     *
+     * @return array{phone: string, label: string, message: string, url: string}|null
+     */
+    public function buildCustomerToOwnerNotification(Order $order): ?array
+    {
+        $storePhone = $this->normalizePhone((string) config('services.store.whatsapp_number', ''));
+        if (!$storePhone) {
+            return null;
+        }
+
+        $order->loadMissing(['payment', 'items']);
+
+        $isCod = $order->payment?->payment_method === PaymentMethod::CashOnDelivery;
+        $methodLabel = $isCod ? 'COD (Bayar di Tempat)' : 'QRIS';
+        $formattedTotal = $this->formatRupiah((float) $order->total);
+
+        $lines = [
+            'Halo AntaMart,',
+            'Saya ingin menanyakan konfirmasi pesanan saya:',
+            "- No. Pesanan: {$order->id}",
+            "- Metode Bayar: {$methodLabel}",
+            "- Total: Rp {$formattedTotal}",
+            '',
+            'Mohon informasi ketersediaan stoknya ya. Terima kasih!',
+        ];
+
+        $message = implode("\n", $lines);
+
+        return [
+            'phone'   => $storePhone,
+            'label'   => 'Tanya Konfirmasi via WhatsApp',
+            'message' => $message,
+            'url'     => 'https://wa.me/' . $storePhone . '?text=' . rawurlencode($message),
         ];
     }
 

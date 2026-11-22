@@ -7,6 +7,7 @@ use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Services\CancellationService;
 use App\Services\OrderExpiryService;
+use App\Services\WhatsAppNotificationService;
 use Illuminate\Http\Request;
 
 class CustomerOrderController extends Controller
@@ -22,8 +23,12 @@ class CustomerOrderController extends Controller
         return view('storefront.account.orders.index', compact('orders'));
     }
 
-    public function show(Request $request, string $orderId, OrderExpiryService $orderExpiryService)
-    {
+    public function show(
+        Request $request,
+        string $orderId,
+        OrderExpiryService $orderExpiryService,
+        WhatsAppNotificationService $whatsAppService
+    ) {
         $user = $request->user('web');
         $order = $user->orders()
             ->with(['items', 'address', 'payment', 'shipment', 'refund', 'latestCancellationRequest'])
@@ -41,6 +46,7 @@ class CustomerOrderController extends Controller
 
         return view('storefront.account.orders.show', [
             'order' => $order,
+            'storeWhatsApp' => $whatsAppService->buildCustomerToOwnerNotification($order),
             'pendingCancellation' => $pendingCancellation,
             'cancellationToDisplay' => $pendingCancellation ?? $order->latestCancellationRequest,
             'canRequestCancellation' => $order->status === OrderStatus::Processing && !$pendingCancellation,

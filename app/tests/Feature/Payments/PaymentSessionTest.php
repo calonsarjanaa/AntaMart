@@ -16,6 +16,13 @@ beforeEach(function () {
     config()->set('services.xendit.secret_key', 'xnd_development_dummy_key');
     config()->set('services.xendit.webhook_token', 'dummy_token');
 
+    $this->owner = User::create([
+        'name' => 'Payment Owner',
+        'email' => 'pay-owner@example.test',
+        'password' => bcrypt('password'),
+        'role' => 'store_owner',
+    ]);
+
     $product = Product::create(['id' => 1, 'name' => 'Cotton Shirt', 'slug' => 'cotton-shirt']);
     $this->variant = ProductVariant::create([
         'product_id'     => $product->id,
@@ -28,14 +35,14 @@ beforeEach(function () {
     ]);
 });
 
-test('checkout creates Xendit invoice and populates payment record per FR-PAY-001', function () {
+test('checkout creates Xendit invoice and populates payment record after store accepts order', function () {
     Http::fake([
         'https://api.xendit.co/v2/invoices' => Http::response([
             'id'          => 'inv_test_9999',
             'external_id' => 'temp-id',
             'invoice_url' => 'https://checkout.xendit.co/web/inv_test_9999',
             'status'      => 'PENDING',
-            'expiry_date' => '2026-11-07T10:15:00.000Z',
+            'expiry_date' => '2026-11-07T11:00:00.000Z',
         ], 200),
     ]);
 
@@ -59,9 +66,16 @@ test('checkout creates Xendit invoice and populates payment record per FR-PAY-00
     $response = $this->postJson('/api/checkout', $payload);
 
     $response->assertStatus(201)
-        ->assertJsonPath('data.payment_url', 'https://checkout.xendit.co/web/inv_test_9999');
+        ->assertJsonPath('data.status', 'awaiting_confirmation')
+        ->assertJsonPath('data.payment_url', null);
 
     $orderId = $response->json('data.order_id');
+
+    $acceptResponse = $this->actingAs($this->owner)->postJson("/api/admin/orders/{$orderId}/accept");
+    $acceptResponse->assertOk()
+        ->assertJsonPath('data.status', 'pending_payment')
+        ->assertJsonPath('data.payment_url', 'https://checkout.xendit.co/web/inv_test_9999');
+
     $order = Order::find($orderId);
     $payment = Payment::where('order_id', $orderId)->first();
 
@@ -75,7 +89,7 @@ test('checkout creates Xendit invoice and populates payment record per FR-PAY-00
         ->and($sessionAudit->payload['invoice_id'])->toBe('inv_test_9999');
 });
 
-test('checkout gracefully handles Xendit gateway outage per TBD-10 without rolling back order', function () {
+test('owner accept gracefully handles Xendit gateway outage per TBD-10 without rolling back order', function () {
     Http::fake([
         'https://api.xendit.co/v2/invoices' => Http::response([
             'error_code' => 'GATEWAY_TIMEOUT',
@@ -101,13 +115,16 @@ test('checkout gracefully handles Xendit gateway outage per TBD-10 without rolli
     ];
 
     $response = $this->postJson('/api/checkout', $payload);
-
-    // Order is successfully created in pending_payment per TBD-10
     $response->assertStatus(201)
+        ->assertJsonPath('data.status', 'awaiting_confirmation');
+
+    $orderId = $response->json('data.order_id');
+
+    $this->actingAs($this->owner)->postJson("/api/admin/orders/{$orderId}/accept")
+        ->assertOk()
         ->assertJsonPath('data.status', 'pending_payment')
         ->assertJsonPath('data.payment_url', null);
 
-    $orderId = $response->json('data.order_id');
     $order = Order::find($orderId);
     expect($order)->not->toBeNull()
         ->and($order->status)->toBe(OrderStatus::PendingPayment);

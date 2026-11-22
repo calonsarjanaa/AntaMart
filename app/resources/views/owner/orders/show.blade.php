@@ -16,6 +16,49 @@
 
         <div class="owner-order-grid">
             <div class="owner-order-main">
+                @if ($order->status->value === 'awaiting_confirmation')
+                    <section class="owner-panel" aria-labelledby="owner-order-confirm-title" style="border: 2px solid #2563eb; background: #f8fbff;">
+                        <div class="owner-panel-heading">
+                            <h2 id="owner-order-confirm-title">Konfirmasi Pesanan (Cek Stok Fisik)</h2>
+                            <x-status-badge status="awaiting_confirmation" />
+                        </div>
+                        <p style="margin-bottom: 14px;">
+                            Periksa ketersediaan stok barang di toko offline sebelum menerima pesanan ini.
+                            @if ($order->payment?->payment_method?->value === 'cod')
+                                Jika diterima, pesanan <strong>COD</strong> akan langsung masuk tahap diproses dan stok dikurangi.
+                            @else
+                                Jika diterima, sistem akan membuat tautan pembayaran <strong>QRIS (berlaku 60 menit)</strong> yang bisa langsung dibayar pembeli.
+                            @endif
+                        </p>
+                        <div class="owner-state-grid">
+                            <div class="owner-state-card">
+                                <span>Terima Pesanan</span>
+                                <small>Stok tersedia di toko dan pesanan siap dilanjutkan.</small>
+                                <form method="post" action="{{ route('owner.orders.accept', $order->id) }}" onsubmit="return confirm('Terima pesanan ini?');" style="margin-top: 10px;">
+                                    @csrf
+                                    <button class="button" type="submit" style="width: 100%; background: #16a34a; border-color: #16a34a;">Terima Pesanan</button>
+                                </form>
+                            </div>
+                            <div class="owner-state-card">
+                                <span>Tolak Pesanan</span>
+                                <form method="post" action="{{ route('owner.orders.reject', $order->id) }}" onsubmit="return confirm('Tolak pesanan ini? Cadangan stok akan dilepaskan.');" style="margin-top: 8px;">
+                                    @csrf
+                                    <label class="field-label" for="order-rejection-reason">Alasan penolakan <span class="required-mark" aria-hidden="true">*</span></label>
+                                    <textarea id="order-rejection-reason" name="rejection_reason" rows="2" maxlength="2000" placeholder="Contoh: Stok fisik di toko sedang habis." required>{{ old('rejection_reason') }}</textarea>
+                                    @error('rejection_reason')<p class="field-error">{{ $message }}</p>@enderror
+                                    <button class="button button-secondary" type="submit" style="margin-top: 8px; width: 100%; color: #b91c1c; border-color: #fca5a5;">Tolak Pesanan</button>
+                                </form>
+                            </div>
+                        </div>
+                    </section>
+                @endif
+
+                @if ($order->rejection_reason)
+                    <x-alert tone="error">
+                        <strong>Pesanan Ditolak oleh Toko:</strong> {{ $order->rejection_reason }}
+                    </x-alert>
+                @endif
+
                 <section class="owner-panel" aria-labelledby="owner-order-items-title">
                     <div class="owner-panel-heading"><h2 id="owner-order-items-title">Item pesanan</h2><span>{{ $order->created_at?->timezone(config('app.timezone'))->format('d M Y, H:i') }}</span></div>
                     <div class="owner-table-wrap">

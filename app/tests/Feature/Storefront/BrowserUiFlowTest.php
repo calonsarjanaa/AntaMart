@@ -78,7 +78,7 @@ test('guest can browse, add to cart, check out, hand off payment, and track the 
         ->assertSee('Kontak pembeli')
         ->assertSee('Gunakan informasi checkout sebelumnya');
 
-    $this->post('/checkout', [
+    $checkoutResponse = $this->post('/checkout', [
         'guest_email' => 'browser-buyer@example.test',
         'guest_phone' => '081234567890',
         'payment_method' => 'xendit',
@@ -90,11 +90,37 @@ test('guest can browse, add to cart, check out, hand off payment, and track the 
             'province' => 'DKI Jakarta',
             'postal_code' => '10110',
         ],
-    ])->assertRedirect('https://checkout.xendit.test/inv_ui_test');
+    ]);
 
     $order = Order::where('guest_email', 'browser-buyer@example.test')->firstOrFail();
     expect($order->items)->toHaveCount(1)
-        ->and($order->payment->xendit_invoice_id)->toBe('inv_ui_test');
+        ->and($order->status)->toBe(OrderStatus::AwaitingConfirmation)
+        ->and($order->payment->xendit_invoice_id)->toBeNull();
+
+    $checkoutResponse->assertRedirect();
+    $resultLocation = $checkoutResponse->headers->get('Location');
+    expect($resultLocation)->toContain("/checkout/result/{$order->id}");
+
+    $this->get($resultLocation)
+        ->assertOk()
+        ->assertSee($order->id)
+        ->assertSee('Menunggu konfirmasi toko');
+
+    // Owner accepts order -> Xendit QRIS invoice created -> customer sees "Bayar Pesanan"
+    $this->actingAs($this->owner)
+        ->post(route('owner.orders.accept', $order->id))
+        ->assertRedirect(route('owner.orders.show', $order->id));
+
+    auth()->logout();
+
+    expect($order->fresh()->status)->toBe(OrderStatus::PendingPayment)
+        ->and($order->fresh()->payment->xendit_invoice_id)->toBe('inv_ui_test');
+
+    $this->get($resultLocation)
+        ->assertOk()
+        ->assertSee($order->id)
+        ->assertSee('Bayar Pesanan')
+        ->assertSee('https://checkout.xendit.test/inv_ui_test', false);
 
     $this->post('/orders/track', ['order_id' => $order->id, 'email' => 'browser-buyer@example.test'])
         ->assertRedirect(route('storefront.orders.track'));
@@ -219,7 +245,7 @@ test('owner login shows the rate limit response after repeated invalid attempts'
     ])->assertTooManyRequests();
 });
 
-test('customer can recover from xendit failure by switching to COD or cancelling pending order', function () {
+test('customer can cancel awaiting confirmation order and recover from xendit failure after owner accepts', function () {
     Http::fake([
         'https://api.xendit.co/v2/invoices' => Http::response(['message' => 'Gateway error'], 500),
     ]);
@@ -227,7 +253,7 @@ test('customer can recover from xendit failure by switching to COD or cancelling
     // Put item in cart
     $this->post('/cart/items', ['product_variant_id' => $this->variant->id, 'quantity' => 1]);
 
-    // Checkout with Xendit, which fails
+    // Checkout with Xendit -> enters awaiting_confirmation
     $response = $this->post('/checkout', [
         'guest_email' => 'failed-payment@example.test',
         'guest_phone' => '081234567890',
@@ -242,25 +268,20 @@ test('customer can recover from xendit failure by switching to COD or cancelling
         ],
     ]);
 
-    $response->assertOk()
-        ->assertSee('Pesanan Tersimpan, Pembayaran Belum Siap')
-        ->assertSee('Beralih ke Bayar di Tempat (COD)')
-        ->assertSee('Batalkan Pesanan');
-
+    $response->assertRedirect();
     $order = Order::where('guest_email', 'failed-payment@example.test')->firstOrFail();
-    expect($order->status)->toBe(OrderStatus::PendingPayment)
-        ->and($order->expires_at)->not->toBeNull()
+    expect($order->status)->toBe(OrderStatus::AwaitingConfirmation)
         ->and($this->variant->fresh()->stock_reserved)->toBe(1);
 
-    // Test cancelling pending order releases reservation and restores cart
-    $cancelResponse = $this->post('/checkout/payment/cancel');
-    $cancelResponse->assertRedirect(route('storefront.cart.index'));
+    // Cancel while awaiting confirmation -> releases stock and restores cart
+    $cancelUrl = URL::temporarySignedRoute('storefront.checkout.result.cancel', now()->addDay(), ['orderId' => $order->id]);
+    $this->post($cancelUrl)->assertRedirect(route('storefront.cart.index'));
 
-    expect($order->fresh()->status)->toBe(OrderStatus::Expired)
+    expect($order->fresh()->status)->toBe(OrderStatus::Cancelled)
         ->and($this->variant->fresh()->stock_reserved)->toBe(0)
         ->and(session('cart'))->toBe([$this->variant->id => 1]);
 
-    // Checkout again and switch to COD
+    // Checkout again, owner accepts (Xendit fails -> stays pending_payment without URL), then switch to COD
     $this->post('/checkout', [
         'guest_email' => 'failed-payment2@example.test',
         'guest_phone' => '081234567890',
@@ -273,14 +294,21 @@ test('customer can recover from xendit failure by switching to COD or cancelling
             'province' => 'DKI Jakarta',
             'postal_code' => '10110',
         ],
-    ]);
-
-    $codResponse = $this->post('/checkout/payment/switch-cod');
-    $codResponse->assertRedirect();
+    ])->assertRedirect();
 
     $secondOrder = Order::where('guest_email', 'failed-payment2@example.test')->firstOrFail();
-    expect($secondOrder->status)->toBe(OrderStatus::Processing)
-        ->and($secondOrder->payment->payment_method)->toBe(\App\Enums\PaymentMethod::CashOnDelivery)
+    $this->actingAs($this->owner)->post(route('owner.orders.accept', $secondOrder->id))
+        ->assertRedirect(route('owner.orders.show', $secondOrder->id));
+    auth()->logout();
+
+    expect($secondOrder->fresh()->status)->toBe(OrderStatus::PendingPayment)
+        ->and($secondOrder->fresh()->payment->xendit_payment_url)->toBeNull();
+
+    $switchCodUrl = URL::temporarySignedRoute('storefront.checkout.result.switch-cod', now()->addDay(), ['orderId' => $secondOrder->id]);
+    $this->post($switchCodUrl)->assertRedirect();
+
+    expect($secondOrder->fresh()->status)->toBe(OrderStatus::Processing)
+        ->and($secondOrder->fresh()->payment->payment_method)->toBe(\App\Enums\PaymentMethod::CashOnDelivery)
         ->and($this->variant->fresh()->stock_reserved)->toBe(0)
         ->and($this->variant->fresh()->stock_physical)->toBe(7);
 });

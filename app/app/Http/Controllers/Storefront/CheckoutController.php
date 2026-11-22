@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Storefront;
 
+use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CheckoutRequest;
@@ -24,8 +25,9 @@ class CheckoutController extends Controller
         $user = $request->user();
         $order = $this->checkoutService->checkout($request->validated(), $user);
 
-        // COD orders enter processing immediately; only Xendit orders need an invoice session.
-        $paymentSession = $order->payment?->payment_method === PaymentMethod::Xendit
+        // Payment session is created only once an order enters pending_payment (after store confirmation).
+        $paymentSession = $order->status === OrderStatus::PendingPayment
+            && $order->payment?->payment_method === PaymentMethod::Xendit
             ? $this->paymentService->createPaymentSession($order)
             : null;
 

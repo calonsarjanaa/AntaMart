@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\CancellationController as AdminCancellationController;
+use App\Http\Controllers\Admin\OrderConfirmationController as AdminOrderConfirmationController;
 use App\Http\Controllers\Admin\RefundController;
 use App\Http\Controllers\Admin\ShipmentController;
 use App\Http\Controllers\Storefront\CancellationRequestController;
@@ -38,6 +39,8 @@ Route::post('/orders/{id}/cancellation-requests/{requestId}/withdraw', [Cancella
 
 // Store Owner cancellation review and immediate cancellation
 Route::middleware(['auth:sanctum', 'role:store_owner'])->prefix('admin')->group(function () {
+    Route::post('/orders/{id}/accept', [AdminOrderConfirmationController::class, 'accept']);
+    Route::post('/orders/{id}/reject', [AdminOrderConfirmationController::class, 'reject']);
     Route::post('/orders/{id}/cancellation-requests/{requestId}/review', [AdminCancellationController::class, 'review']);
     Route::post('/orders/{id}/cancel', [AdminCancellationController::class, 'cancel']);
     Route::post('/orders/{id}/refund/mark-refunded', [RefundController::class, 'markRefunded']);

@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Services\OrderConfirmationService;
 use App\Services\OrderExpiryService;
 use App\Services\WhatsAppNotificationService;
 use Illuminate\Http\Request;
@@ -97,6 +98,8 @@ class OwnerOrderController extends Controller
 
         $eventLabels = [
             'order.created' => 'Pesanan dibuat',
+            'order.accepted' => 'Pesanan diterima oleh toko',
+            'order.rejected' => 'Pesanan ditolak oleh toko',
             'payment.session_created' => 'Invoice pembayaran dibuat',
             'payment.confirmed' => 'Pembayaran dikonfirmasi',
             'payment.late_detected' => 'Pembayaran terlambat diterima',
@@ -130,6 +133,35 @@ class OwnerOrderController extends Controller
         $whatsAppNotification = $whatsAppService->buildNotification($order);
 
         return view('owner.orders.show', compact('order', 'auditLogs', 'eligibleResellableItemIds', 'hasMoreAuditLogs', 'whatsAppNotification'));
+    }
+
+    public function accept(Request $request, string $orderId, OrderConfirmationService $confirmationService)
+    {
+        $order = $confirmationService->accept(Order::findOrFail($orderId), $request->user('web'));
+
+        $message = $order->status === OrderStatus::PendingPayment
+            ? 'Pesanan diterima! Tautan pembayaran QRIS (berlaku 60 menit) telah dibuat. Anda dapat mengirimkannya ke pembeli via WhatsApp.'
+            : 'Pesanan COD diterima dan kini sedang diproses.';
+
+        return to_route('owner.orders.show', $order->id)->with('status', $message);
+    }
+
+    public function reject(Request $request, string $orderId, OrderConfirmationService $confirmationService)
+    {
+        $data = $request->validate([
+            'rejection_reason' => ['required', 'string', 'max:2000'],
+        ], [
+            'rejection_reason.required' => 'Alasan penolakan wajib diisi agar dapat dilihat oleh pembeli.',
+        ]);
+
+        $order = $confirmationService->reject(
+            Order::findOrFail($orderId),
+            $request->user('web'),
+            $data['rejection_reason']
+        );
+
+        return to_route('owner.orders.show', $order->id)
+            ->with('status', 'Pesanan ditolak dan cadangan stok telah dilepaskan.');
     }
 
     /** @param array<string, mixed> $payload */

@@ -11,13 +11,15 @@ class XenditAdapter implements PaymentGatewayInterface
         protected ?string $secretKey = null,
         protected ?string $webhookToken = null,
         protected ?string $baseUrl = null,
-        protected ?array $paymentMethods = null
+        protected ?array $paymentMethods = null,
+        protected ?int $invoiceDuration = null
     ) {
         $hasConfig = function_exists('config') && function_exists('app') && app()->has('config');
         $this->secretKey = $secretKey ?? ($hasConfig ? config('services.xendit.secret_key') : null);
         $this->webhookToken = $webhookToken ?? ($hasConfig ? config('services.xendit.webhook_token') : null);
         $this->baseUrl = $baseUrl ?? ($hasConfig ? config('services.xendit.base_url', 'https://api.xendit.co') : 'https://api.xendit.co');
         $this->paymentMethods = $paymentMethods ?? ($hasConfig ? config('services.xendit.payment_methods', ['QRIS']) : ['QRIS']);
+        $this->invoiceDuration = $invoiceDuration ?? ($hasConfig ? (int) config('services.xendit.invoice_duration', 3600) : 3600);
     }
 
     /**
@@ -41,12 +43,14 @@ class XenditAdapter implements PaymentGatewayInterface
             throw new RuntimeException("Xendit secret key is not configured.");
         }
 
+        $duration = max(60, (int) ($metadata['invoice_duration'] ?? $this->invoiceDuration ?? 3600));
+
         $payload = [
             'external_id'      => $orderId,
             'amount'           => (int) round($amount),
             'payer_email'      => $customerEmail,
             'description'      => "AntaMart Order #{$orderId}",
-            'invoice_duration' => 900, // 15 minutes (in seconds) per FR-PAY-002
+            'invoice_duration' => $duration, // 60 minutes (3600s) default after store confirmation
             'currency'         => 'IDR',
         ];
 

@@ -27,8 +27,28 @@
                     @if ($order->payment?->payment_method?->value === 'cod')
                         <p class="tracking-status-copy">Metode pembayaran: Bayar di tempat (COD).</p>
                     @endif
-                    @if ($order->status->value === 'pending_payment')
+                    @if ($order->status->value === 'awaiting_confirmation')
+                        <p class="tracking-status-copy">Pesanan menunggu konfirmasi ketersediaan stok dari toko. Tombol pembayaran akan aktif setelah toko menerima pesanan Anda.</p>
+                        @if (!empty($storeWhatsApp))
+                            <a
+                                class="button"
+                                href="{{ $storeWhatsApp['url'] }}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style="display: inline-flex; align-items: center; gap: 8px; margin-top: 10px; background: #16a34a; border-color: #16a34a; color: #ffffff; text-decoration: none;"
+                            >
+                                <span>{{ $storeWhatsApp['label'] }}</span>
+                            </a>
+                        @endif
+                    @elseif ($order->status->value === 'pending_payment')
                         <p class="tracking-status-copy">Pesanan menunggu konfirmasi pembayaran.</p>
+                        @if ($order->payment?->xendit_payment_url && $order->expires_at?->isFuture())
+                            <a class="button button-primary order-result-action" href="{{ $order->payment->xendit_payment_url }}" style="margin-top: 10px;">Bayar Pesanan</a>
+                        @endif
+                    @elseif ($order->status->value === 'cancelled' && $order->rejection_reason)
+                        <x-alert tone="error" class="order-result-alert">
+                            <strong>Pesanan ditolak oleh toko:</strong> {{ $order->rejection_reason }}
+                        </x-alert>
                     @elseif ($order->status->value === 'processing')
                         @if ($order->payment?->payment_method?->value === 'cod' && $order->payment?->status?->value !== 'paid')
                             <p class="tracking-status-copy">Siapkan pembayaran tunai saat pesanan diterima. Toko akan mencatat pembayaran setelah uang diterima.</p>

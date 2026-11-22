@@ -15,6 +15,7 @@ use App\Services\CheckoutService;
 use App\Services\InventoryService;
 use App\Services\OrderExpiryService;
 use App\Services\PaymentService;
+use App\Services\WhatsAppNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -350,8 +351,12 @@ class BrowserCheckoutController extends Controller
         ))->with('status', '[Mode Lokal] Simulasi pembayaran Xendit berhasil. Pesanan langsung diproses!');
     }
 
-    public function result(string $orderId, PaymentService $paymentService, OrderExpiryService $orderExpiryService)
-    {
+    public function result(
+        string $orderId,
+        PaymentService $paymentService,
+        OrderExpiryService $orderExpiryService,
+        WhatsAppNotificationService $whatsAppService
+    ) {
         $order = Order::query()
             ->whereKey($orderId)
             ->with(['items', 'payment', 'shipment', 'refund', 'latestCancellationRequest'])
@@ -371,6 +376,7 @@ class BrowserCheckoutController extends Controller
 
         return view('storefront.checkout.result', [
             'order' => $order,
+            'storeWhatsApp' => $whatsAppService->buildCustomerToOwnerNotification($order),
             'retryUrl' => URL::temporarySignedRoute(
                 'storefront.checkout.result.retry',
                 now()->addDays(3),
@@ -471,17 +477,18 @@ class BrowserCheckoutController extends Controller
             }
         }
 
-        if ($order->status !== OrderStatus::PendingPayment) {
+        if (!in_array($order->status, [OrderStatus::AwaitingConfirmation, OrderStatus::PendingPayment], true)) {
             return redirect()->back()->with('status', 'Status pesanan sudah berubah dan tidak dapat dibatalkan dari halaman ini.');
         }
 
         DB::transaction(function () use ($order, $inventoryService): void {
             $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
-            if ($lockedOrder->status !== OrderStatus::PendingPayment) {
+            if (!in_array($lockedOrder->status, [OrderStatus::AwaitingConfirmation, OrderStatus::PendingPayment], true)) {
                 return;
             }
 
-            $lockedOrder->transitionTo(OrderStatus::Expired);
+            $wasAwaitingConfirmation = $lockedOrder->status === OrderStatus::AwaitingConfirmation;
+            $lockedOrder->transitionTo($wasAwaitingConfirmation ? OrderStatus::Cancelled : OrderStatus::Expired);
 
             $payment = $lockedOrder->payment()->lockForUpdate()->first();
             if ($payment && $payment->status === PaymentStatus::Pending) {
@@ -490,7 +497,9 @@ class BrowserCheckoutController extends Controller
             }
 
             $inventoryService->releaseReservations($lockedOrder);
-            PaymentExpired::dispatch($lockedOrder);
+            if (!$wasAwaitingConfirmation) {
+                PaymentExpired::dispatch($lockedOrder);
+            }
 
             AuditEvent::dispatch(
                 'order.cancelled_by_customer',
@@ -567,6 +576,16 @@ class BrowserCheckoutController extends Controller
     private function continuePayment(Order $order, PaymentService $paymentService)
     {
         $order->loadMissing(['address', 'payment']);
+        if ($order->status === OrderStatus::AwaitingConfirmation) {
+            session()->forget(['cart', 'checkout.order_id', 'checkout.idempotency_key']);
+
+            return redirect()->to(URL::temporarySignedRoute(
+                'storefront.checkout.result',
+                now()->addDays(3),
+                ['orderId' => $order->id]
+            ))->with('status', 'Pesanan berhasil dibuat! Menunggu konfirmasi ketersediaan stok dari toko.');
+        }
+
         if ($order->status !== OrderStatus::PendingPayment) {
             session()->forget(['cart', 'checkout.order_id', 'checkout.idempotency_key']);
 
@@ -598,7 +617,11 @@ class BrowserCheckoutController extends Controller
 
         session()->forget(['cart', 'checkout.order_id', 'checkout.idempotency_key']);
 
-        return redirect()->away($paymentUrl);
+        return redirect()->to(URL::temporarySignedRoute(
+            'storefront.checkout.result',
+            now()->addDays(3),
+            ['orderId' => $order->id]
+        ))->with('status', 'Pesanan berhasil dibuat! Silakan klik "Bayar Pesanan" untuk menyelesaikan pembayaran.');
     }
 
     private function paymentUnavailable(Order $order, ?string $errorMessage = null)

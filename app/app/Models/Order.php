@@ -29,6 +29,9 @@ class Order extends Model
         'total',
         'idempotency_key',
         'expires_at',
+        'rejection_reason',
+        'confirmed_at',
+        'rejected_at',
     ];
 
     protected $casts = [
@@ -37,6 +40,8 @@ class Order extends Model
         'shipping_cost' => 'decimal:2',
         'total'         => 'decimal:2',
         'expires_at'    => 'datetime',
+        'confirmed_at'  => 'datetime',
+        'rejected_at'   => 'datetime',
     ];
 
     public function isGuest(): bool
