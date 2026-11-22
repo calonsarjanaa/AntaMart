@@ -43,7 +43,7 @@
                     @elseif ($order->status->value === 'pending_payment')
                         <p class="tracking-status-copy">Pesanan menunggu konfirmasi pembayaran.</p>
                         @if ($order->payment?->xendit_payment_url && $order->expires_at?->isFuture())
-                            <a class="button button-primary order-result-action" href="{{ $order->payment->xendit_payment_url }}" style="margin-top: 10px;">Bayar Pesanan</a>
+                            <a class="button button-primary order-result-action" href="{{ route('storefront.account.orders.pay', $order->id) }}" style="margin-top: 10px;">Bayar Pesanan</a>
                         @endif
                     @elseif ($order->status->value === 'cancelled' && $order->rejection_reason)
                         <x-alert tone="error" class="order-result-alert">
@@ -116,9 +116,9 @@
                     </section>
                 @endif
 
-                @if ($order->latestCancellationRequest || $canRequestCancellation)
+                @if ($order->latestCancellationRequest || $canRequestCancellation || in_array($order->status->value, ['processing', 'shipped'], true))
                     <section class="checkout-form-section tracking-cancellation-panel" aria-labelledby="customer-order-cancellation-title">
-                        <h2 id="customer-order-cancellation-title">Permintaan pembatalan</h2>
+                        <h2 id="customer-order-cancellation-title">{{ $canDirectCancel ? 'Batalkan pesanan' : 'Permintaan pembatalan' }}</h2>
                         @if ($cancellationToDisplay)
                             <div class="cancellation-request-summary"><span>Status</span><x-status-badge :status="$cancellationToDisplay->status->value" /></div>
                             <p>{{ $cancellationToDisplay->reason }}</p>
@@ -134,7 +134,11 @@
                                 <button class="button button-secondary" type="submit">Tarik permintaan</button>
                             </form>
                         @elseif ($canRequestCancellation)
-                            <p>Permintaan akan ditinjau oleh toko. Jika pesanan yang sudah dibayar dibatalkan, pengembalian dana ditangani secara manual.</p>
+                            @if ($canDirectCancel)
+                                <p>Pesanan belum dibayar dan dapat dibatalkan langsung tanpa persetujuan toko.</p>
+                            @else
+                                <p>Permintaan pembatalan akan ditinjau oleh toko (pengajuan {{ $cancellationAttempts }} dari {{ $maxCancellationAttempts }}). Jika disetujui pada pesanan yang sudah dibayar, pengembalian dana diproses di luar aplikasi.</p>
+                            @endif
                             <form class="cancellation-action-form" method="post" action="{{ route('storefront.account.orders.cancellation.store', $order->id) }}">
                                 @csrf
                                 <div class="form-field">
@@ -142,8 +146,10 @@
                                     <textarea id="customer-cancellation-reason" name="reason" class="field-input cancellation-reason-input @error('reason') field-input-invalid @enderror" maxlength="2000" required @error('reason') aria-invalid="true" aria-describedby="customer-cancellation-reason-error" @enderror>{{ old('reason') }}</textarea>
                                     @error('reason')<p class="field-error" id="customer-cancellation-reason-error">{{ $message }}</p>@enderror
                                 </div>
-                                <button class="button button-primary" type="submit">Kirim permintaan pembatalan</button>
+                                <button class="button button-primary" type="submit">{{ $canDirectCancel ? 'Batalkan pesanan' : 'Kirim permintaan pembatalan' }}</button>
                             </form>
+                        @elseif (in_array($order->status->value, ['processing', 'shipped'], true) && $cancellationAttempts >= $maxCancellationAttempts)
+                            <p class="tracking-status-copy">Batas maksimal pengajuan pembatalan ({{ $maxCancellationAttempts }} kali) untuk pesanan ini telah tercapai.</p>
                         @endif
                     </section>
                 @endif

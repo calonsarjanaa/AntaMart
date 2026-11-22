@@ -224,11 +224,13 @@
                             </form>
                         </div>
                     @endif
-                    @if ($order->status->value === 'processing')
+                    @if (in_array($order->status->value, ['pending_payment', 'processing', 'shipped'], true))
                         <div class="owner-cancel-order">
                             <h3>Batalkan pesanan sebagai pemilik</h3>
-                            @if ($order->payment?->status->value === 'paid')
-                                <x-alert tone="warning">Pembayaran sudah diterima. Setelah pembatalan, pengembalian dana perlu ditransfer dan dicatat secara manual.</x-alert>
+                            @if ($order->status->value === 'pending_payment')
+                                <x-alert tone="info">Pesanan belum dibayar. Pembatalan akan langsung mengunci tautan pembayaran QRIS dan melepaskan cadangan stok.</x-alert>
+                            @elseif ($order->payment?->status->value === 'paid')
+                                <x-alert tone="warning">Pembayaran sudah diterima. Proses pengembalian dana (refund) dilakukan di luar aplikasi dan dapat dicatat secara manual setelah selesai.</x-alert>
                             @endif
                             <form method="post" action="{{ route('owner.orders.cancel', $order->id) }}" onsubmit="return confirm('Batalkan pesanan ini? Tindakan ini tidak dapat dibatalkan.');">
                                 @csrf

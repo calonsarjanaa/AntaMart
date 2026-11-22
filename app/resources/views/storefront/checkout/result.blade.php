@@ -93,7 +93,7 @@
                     @endif
 
                     @if ($orderStatus === 'awaiting_confirmation')
-                        <div class="order-result-secondary-actions" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px;">
+                        <div class="order-result-secondary-actions" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; align-items: flex-start;">
                             @if (!empty($storeWhatsApp))
                                 <a
                                     class="button"
@@ -108,15 +108,19 @@
                                     <span>{{ $storeWhatsApp['label'] }}</span>
                                 </a>
                             @endif
-                            <form method="post" action="{{ $cancelUrl }}" style="margin: 0;" onsubmit="return confirm('Batalkan pesanan ini dan kembalikan produk ke keranjang?');">
-                                @csrf
-                                <button class="button button-danger" type="submit">Batalkan Pesanan</button>
-                            </form>
                         </div>
+                        <form method="post" action="{{ $cancelUrl }}" style="margin-top: 14px;" onsubmit="return confirm('Batalkan pesanan ini dan kembalikan produk ke keranjang?');">
+                            @csrf
+                            <div class="form-field" style="margin-bottom: 8px;">
+                                <label class="field-label" for="result-cancel-reason-awaiting">Alasan pembatalan <span class="required-mark" aria-hidden="true">*</span></label>
+                                <input id="result-cancel-reason-awaiting" name="reason" type="text" class="field-input" maxlength="2000" placeholder="Contoh: Ingin mengubah jumlah atau produk" required value="{{ old('reason') }}">
+                            </div>
+                            <button class="button button-danger" type="submit">Batalkan Pesanan</button>
+                        </form>
                         <a class="order-result-refresh" href="{{ request()->fullUrl() }}">Muat ulang status</a>
                     @elseif ($orderStatus === 'pending_payment')
                         @if ($order->payment?->xendit_payment_url && $order->expires_at?->isFuture())
-                            <a class="button button-primary order-result-action" href="{{ $order->payment->xendit_payment_url }}">Bayar Pesanan</a>
+                            <a class="button button-primary order-result-action" href="{{ $payUrl }}">Bayar Pesanan</a>
                             <p class="order-result-note">Batas pembayaran: {{ $order->expires_at->timezone(config('app.timezone'))->format('d M Y, H:i') }}.</p>
                         @elseif (!$order->expires_at)
                             <form method="post" action="{{ $retryUrl }}">
@@ -133,11 +137,15 @@
                                     @csrf
                                     <button class="button button-secondary" type="submit">Beralih ke Bayar di Tempat (COD)</button>
                                 </form>
-                                <form method="post" action="{{ $cancelUrl }}" style="margin: 0;" onsubmit="return confirm('Batalkan pesanan ini dan kembalikan produk ke keranjang?');">
-                                    @csrf
-                                    <button class="button button-danger" type="submit">Batalkan Pesanan</button>
-                                </form>
                             </div>
+                            <form method="post" action="{{ $cancelUrl }}" style="margin-top: 14px;" onsubmit="return confirm('Batalkan pesanan ini dan kembalikan produk ke keranjang?');">
+                                @csrf
+                                <div class="form-field" style="margin-bottom: 8px;">
+                                    <label class="field-label" for="result-cancel-reason-pending">Alasan pembatalan <span class="required-mark" aria-hidden="true">*</span></label>
+                                    <input id="result-cancel-reason-pending" name="reason" type="text" class="field-input" maxlength="2000" placeholder="Contoh: Berubah pikiran" required value="{{ old('reason') }}">
+                                </div>
+                                <button class="button button-danger" type="submit">Batalkan Pesanan</button>
+                            </form>
                         @endif
 
                         <a class="order-result-refresh" href="{{ request()->fullUrl() }}">Muat ulang status</a>

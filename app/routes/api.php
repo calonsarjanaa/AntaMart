@@ -34,8 +34,8 @@ Route::post('/orders/{id}/payment-session', RetryPaymentSessionController::class
 Route::get('/track', GuestOrderTrackingController::class)->middleware('throttle:10,1');
 
 // Customer and guest order cancellation
-Route::post('/orders/{id}/cancellation-requests', [CancellationRequestController::class, 'store']);
-Route::post('/orders/{id}/cancellation-requests/{requestId}/withdraw', [CancellationRequestController::class, 'withdraw']);
+Route::post('/orders/{id}/cancellation-requests', [CancellationRequestController::class, 'store'])->middleware('throttle:10,1');
+Route::post('/orders/{id}/cancellation-requests/{requestId}/withdraw', [CancellationRequestController::class, 'withdraw'])->middleware('throttle:10,1');
 
 // Store Owner cancellation review and immediate cancellation
 Route::middleware(['auth:sanctum', 'role:store_owner'])->prefix('admin')->group(function () {

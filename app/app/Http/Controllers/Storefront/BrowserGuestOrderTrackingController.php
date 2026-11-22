@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Storefront;
 use App\Http\Controllers\Controller;
 use App\Enums\CancellationStatus;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Models\Order;
+use App\Services\CancellationService;
 use App\Services\GuestOrderTrackingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
@@ -32,12 +34,28 @@ class BrowserGuestOrderTrackingController extends Controller
             ->latest()
             ->first();
         $hasPendingCancellation = $pendingCancellation !== null;
+        $cancellationAttempts = $order ? $order->cancellationRequests()->count() : 0;
+        $maxCancellationAttempts = CancellationService::MAX_CUSTOMER_REQUESTS;
+        $isPaymentPending = !$order?->payment || $order->payment->status === PaymentStatus::Pending;
+
+        $canDirectCancel = $order && (
+            $order->status === OrderStatus::AwaitingConfirmation
+            || ($order->status === OrderStatus::PendingPayment && $isPaymentPending)
+        );
+        $canRequestApprovalCancel = $order
+            && in_array($order->status, [OrderStatus::Processing, OrderStatus::Shipped], true)
+            && !$hasPendingCancellation
+            && $cancellationAttempts < $maxCancellationAttempts;
 
         return view('storefront.tracking.index', [
             'order' => $order,
             'pendingCancellation' => $pendingCancellation,
             'latestCancellation' => $order?->latestCancellationRequest,
-            'cancellationStoreUrl' => $order?->status === OrderStatus::Processing && !$hasPendingCancellation
+            'canDirectCancel' => $canDirectCancel,
+            'canRequestCancellation' => $canDirectCancel || $canRequestApprovalCancel,
+            'cancellationAttempts' => $cancellationAttempts,
+            'maxCancellationAttempts' => $maxCancellationAttempts,
+            'cancellationStoreUrl' => ($canDirectCancel || $canRequestApprovalCancel)
                 ? URL::temporarySignedRoute('storefront.orders.cancellation.store', now()->addDays(3), ['id' => $order->id])
                 : null,
             'cancellationWithdrawUrl' => $pendingCancellation && $pendingCancellation->decided_at === null

@@ -20,9 +20,9 @@ enum OrderStatus: string
     {
         return match($this) {
             self::AwaitingConfirmation => [self::PendingPayment, self::Processing, self::Cancelled],
-            self::PendingPayment       => [self::Processing, self::Expired],
+            self::PendingPayment       => [self::Processing, self::Expired, self::Cancelled],
             self::Processing           => [self::Cancelled, self::Shipped],
-            self::Shipped              => [self::Completed],
+            self::Shipped              => [self::Completed, self::Cancelled],
             self::Cancelled,
             self::Completed,
             self::Expired              => [], // Terminal states

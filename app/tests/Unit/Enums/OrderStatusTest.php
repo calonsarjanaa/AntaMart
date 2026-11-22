@@ -2,12 +2,12 @@
 
 use App\Enums\OrderStatus;
 
-test('pending payment allows transition to processing or expired', function () {
+test('pending payment allows transition to processing, expired, or cancelled', function () {
     $status = OrderStatus::PendingPayment;
 
     expect($status->canTransitionTo(OrderStatus::Processing))->toBeTrue();
     expect($status->canTransitionTo(OrderStatus::Expired))->toBeTrue();
-    expect($status->canTransitionTo(OrderStatus::Cancelled))->toBeFalse();
+    expect($status->canTransitionTo(OrderStatus::Cancelled))->toBeTrue();
     expect($status->canTransitionTo(OrderStatus::Shipped))->toBeFalse();
     expect($status->canTransitionTo(OrderStatus::Completed))->toBeFalse();
 });
@@ -22,11 +22,11 @@ test('processing allows transition to cancelled or shipped', function () {
     expect($status->canTransitionTo(OrderStatus::Completed))->toBeFalse();
 });
 
-test('shipped allows transition only to completed', function () {
+test('shipped allows transition to completed or cancelled', function () {
     $status = OrderStatus::Shipped;
 
     expect($status->canTransitionTo(OrderStatus::Completed))->toBeTrue();
-    expect($status->canTransitionTo(OrderStatus::Cancelled))->toBeFalse();
+    expect($status->canTransitionTo(OrderStatus::Cancelled))->toBeTrue();
     expect($status->canTransitionTo(OrderStatus::Processing))->toBeFalse();
 });
 

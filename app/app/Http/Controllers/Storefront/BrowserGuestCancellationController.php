@@ -20,14 +20,18 @@ class BrowserGuestCancellationController extends Controller
         $order = $this->trackedOrder($request, $id);
         $this->assertGuestEmail($order, $data['guest_email']);
 
-        $cancellationService->submitRequest(
+        $cancellationRequest = $cancellationService->submitRequest(
             $order,
             null,
             $data['guest_email'],
             $data['reason']
         );
 
-        return redirect()->route('storefront.orders.track')->with('status', 'Permintaan pembatalan dikirim untuk ditinjau oleh toko.');
+        $message = $cancellationRequest->status === \App\Enums\CancellationStatus::Approved
+            ? 'Pesanan berhasil dibatalkan.'
+            : 'Permintaan pembatalan dikirim untuk ditinjau oleh toko.';
+
+        return redirect()->route('storefront.orders.track')->with('status', $message);
     }
 
     public function withdraw(Request $request, string $id, int $requestId, CancellationService $cancellationService)

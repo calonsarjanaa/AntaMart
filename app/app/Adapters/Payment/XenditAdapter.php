@@ -113,6 +113,26 @@ class XenditAdapter implements PaymentGatewayInterface
         return $response->json();
     }
 
+    /**
+     * Best-effort expire an active Xendit invoice so the payment link cannot be used after cancellation.
+     */
+    public function expireInvoice(string $invoiceId): bool
+    {
+        if (empty($this->secretKey) || empty($invoiceId)) {
+            return false;
+        }
+
+        try {
+            $response = Http::withBasicAuth($this->secretKey, '')
+                ->timeout(10)
+                ->post("{$this->baseUrl}/invoices/{$invoiceId}/expire!");
+
+            return $response->successful();
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
     public function verifyWebhook(array $headers, array $payload): bool
     {
         $token = $headers['x-callback-token'] ?? null;
