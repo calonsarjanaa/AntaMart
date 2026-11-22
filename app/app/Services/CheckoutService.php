@@ -15,6 +15,7 @@ use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\ProductVariant;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -81,7 +82,7 @@ class CheckoutService
         // Lazy expiration fallback: free stock from abandoned overdue orders if background worker is delayed/stopped
         $this->orderExpiryService->expirePastDueForVariants($variantIds);
 
-        $variants = ProductVariant::with('product')
+        $variants = ProductVariant::with('product.category')
             ->whereIn('id', $variantIds)
             ->where('is_active', true)
             ->whereHas('product', fn ($query) => $query->where('is_active', true))
@@ -90,6 +91,7 @@ class CheckoutService
 
         $preparedItems = [];
         $subtotal = 0.00;
+        $maxRequiredAge = 0;
 
         foreach ($itemsData as $item) {
             $variantId = $item['product_variant_id'];
@@ -103,6 +105,11 @@ class CheckoutService
 
             /** @var ProductVariant $variant */
             $variant = $variants->get($variantId);
+
+            if ($variant->product->isAgeRestricted()) {
+                $maxRequiredAge = max($maxRequiredAge, (int) $variant->product->category->min_age);
+            }
+
             $unitPrice = (float) $variant->price;
             $lineSubtotal = $unitPrice * $quantity;
             $subtotal += $lineSubtotal;
@@ -113,6 +120,26 @@ class CheckoutService
                 'unit_price'    => $unitPrice,
                 'line_subtotal' => $lineSubtotal,
             ];
+        }
+
+        if ($maxRequiredAge > 0) {
+            $sessionVerified = app()->bound('session') && session("age_verified_{$maxRequiredAge}") === true;
+            $birthDateRaw = $data['birth_date'] ?? null;
+            $birthDateVerified = false;
+
+            if (!empty($birthDateRaw)) {
+                try {
+                    $birthDateVerified = Carbon::parse((string) $birthDateRaw)->age >= $maxRequiredAge;
+                } catch (\Throwable) {
+                    $birthDateVerified = false;
+                }
+            }
+
+            if (!$sessionVerified && !$birthDateVerified) {
+                throw ValidationException::withMessages([
+                    'birth_date' => "Pesanan mengandung produk khusus usia {$maxRequiredAge}+ tahun. Verifikasi tanggal lahir diperlukan.",
+                ]);
+            }
         }
 
         // FR-SHP-003 — Snapshot shipping cost

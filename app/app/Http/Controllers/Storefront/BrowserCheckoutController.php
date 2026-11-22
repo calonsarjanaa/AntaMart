@@ -44,9 +44,23 @@ class BrowserCheckoutController extends Controller
             ->whereIn('id', array_keys($cart))
             ->where('is_active', true)
             ->whereHas('product', fn ($query) => $query->where('is_active', true))
-            ->with('product')
+            ->with('product.category')
             ->get()
             ->keyBy('id');
+
+        foreach ($variants as $variant) {
+            if ($variant->product->isAgeRestricted()) {
+                $category = $variant->product->category;
+                $minAge = $category->min_age;
+
+                if (!session("age_verified_{$minAge}")) {
+                    return redirect()->route('storefront.age-verification.show', [
+                        'category' => $category->slug,
+                        'return_url' => route('storefront.checkout.create'),
+                    ]);
+                }
+            }
+        }
 
         $items = collect($cart)->map(function (int $quantity, int|string $id) use ($variants): ?array {
             $variant = $variants->get($id);
@@ -178,6 +192,7 @@ class BrowserCheckoutController extends Controller
                 ...$validated,
                 'idempotency_key' => $idempotencyKey,
                 'payment_method' => $validated['payment_method'],
+                'birth_date' => session('age_verified_birth_date'),
                 'items' => $items,
                 'shipping_address' => [
                     ...$validated['shipping_address'],

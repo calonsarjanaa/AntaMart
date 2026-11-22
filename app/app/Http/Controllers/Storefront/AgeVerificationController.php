@@ -16,7 +16,8 @@ class AgeVerificationController extends Controller
         $minAge = $categoryModel->min_age ?? 21;
 
         if (!$categoryModel->isAgeRestricted() || session("age_verified_{$minAge}")) {
-            $returnUrl = $request->query('return_url') ?: route('storefront.home', ['category' => $categoryModel->slug]);
+            $fallback = route('storefront.home', ['category' => $categoryModel->slug]);
+            $returnUrl = $this->safeReturnUrl($request->query('return_url'), $fallback);
 
             return redirect()->to($returnUrl);
         }
@@ -24,7 +25,7 @@ class AgeVerificationController extends Controller
         return view('storefront.age-verification', [
             'category' => $categoryModel,
             'minAge' => $minAge,
-            'returnUrl' => $request->query('return_url'),
+            'returnUrl' => $this->safeReturnUrl($request->query('return_url'), ''),
         ]);
     }
 
@@ -56,11 +57,32 @@ class AgeVerificationController extends Controller
             'age_verified_birth_date' => $validated['birth_date'],
         ]);
 
-        $returnUrl = !empty($validated['return_url'])
-            ? $validated['return_url']
-            : route('storefront.home', ['category' => $categoryModel->slug]);
+        $fallback = route('storefront.home', ['category' => $categoryModel->slug]);
+        $returnUrl = $this->safeReturnUrl($validated['return_url'] ?? null, $fallback);
 
         return redirect()->to($returnUrl)->with('status', "Verifikasi berhasil. Anda dapat mengakses kategori {$categoryModel->name}.");
+    }
+
+    private function safeReturnUrl(?string $returnUrl, string $fallback): string
+    {
+        if (empty($returnUrl)) {
+            return $fallback;
+        }
+
+        $returnUrl = trim($returnUrl);
+
+        if (str_starts_with($returnUrl, '/') && !str_starts_with($returnUrl, '//')) {
+            return $returnUrl;
+        }
+
+        $appHost = parse_url(url('/'), PHP_URL_HOST);
+        $targetHost = parse_url($returnUrl, PHP_URL_HOST);
+
+        if ($appHost && $targetHost && strcasecmp($appHost, $targetHost) === 0) {
+            return $returnUrl;
+        }
+
+        return $fallback;
     }
 }
 

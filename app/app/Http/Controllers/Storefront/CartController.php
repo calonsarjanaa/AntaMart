@@ -75,13 +75,27 @@ class CartController extends Controller
             ->whereKey($data['product_variant_id'])
             ->where('is_active', true)
             ->whereHas('product', fn ($product) => $product->where('is_active', true))
-            ->with('product')
+            ->with('product.category')
             ->first();
 
         if (!$variant) {
             throw ValidationException::withMessages([
                 'product_variant_id' => 'Produk ini sudah tidak tersedia.',
             ]);
+        }
+
+        if ($variant->product->isAgeRestricted()) {
+            $category = $variant->product->category;
+            $minAge = $category->min_age;
+
+            if (!session("age_verified_{$minAge}")) {
+                return redirect()->route('storefront.age-verification.show', [
+                    'category' => $category->slug,
+                    'return_url' => route('storefront.products.show', $variant->product->slug),
+                ])->withErrors([
+                    'birth_date' => "Verifikasi usia minimal {$minAge} tahun diperlukan sebelum menambahkan produk ini ke keranjang.",
+                ]);
+            }
         }
 
         $cart = session('cart', []);
