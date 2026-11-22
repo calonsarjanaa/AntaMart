@@ -239,6 +239,24 @@
                 @else
                     <p class="owner-muted">Alamat tidak tersedia.</p>
                 @endif
+
+                @if (!empty($whatsAppNotification))
+                    <hr>
+                    <h3>Notifikasi WhatsApp</h3>
+                    <p class="owner-muted" style="margin-bottom: 10px;">Template pesan otomatis menyesuaikan status pesanan saat ini.</p>
+                    <a
+                        class="button"
+                        href="{{ $whatsAppNotification['url'] }}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background: #16a34a; border-color: #16a34a; color: #ffffff; text-decoration: none;"
+                    >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/>
+                        </svg>
+                        <span>{{ $whatsAppNotification['label'] }}</span>
+                    </a>
+                @endif
             </aside>
         </div>
     </section>

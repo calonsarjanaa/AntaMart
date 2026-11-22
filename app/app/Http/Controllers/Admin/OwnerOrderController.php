@@ -7,6 +7,7 @@ use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Services\OrderExpiryService;
+use App\Services\WhatsAppNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
@@ -60,7 +61,7 @@ class OwnerOrderController extends Controller
         ]);
     }
 
-    public function show(string $orderId, OrderExpiryService $orderExpiryService)
+    public function show(string $orderId, OrderExpiryService $orderExpiryService, WhatsAppNotificationService $whatsAppService)
     {
         $order = Order::query()
             ->with(['customer', 'items', 'address', 'payment', 'shipment', 'refund.refundedBy', 'latestCancellationRequest'])
@@ -126,7 +127,9 @@ class OwnerOrderController extends Controller
             $log->setAttribute('display_summary', $this->auditSummary($log->event, $log->payload ?? []));
         });
 
-        return view('owner.orders.show', compact('order', 'auditLogs', 'eligibleResellableItemIds', 'hasMoreAuditLogs'));
+        $whatsAppNotification = $whatsAppService->buildNotification($order);
+
+        return view('owner.orders.show', compact('order', 'auditLogs', 'eligibleResellableItemIds', 'hasMoreAuditLogs', 'whatsAppNotification'));
     }
 
     /** @param array<string, mixed> $payload */
