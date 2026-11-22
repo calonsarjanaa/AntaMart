@@ -64,7 +64,9 @@ class PaymentService
 
             $expiresAt = Carbon::parse($invoice['expires_at']);
 
-            DB::transaction(function () use ($order, $invoice, $expiresAt): void {
+            $previousExpiresAt = $order->expires_at;
+
+            DB::transaction(function () use ($order, $invoice, $expiresAt, $previousExpiresAt): void {
                 // Record gateway session details, audit event, and expiry job atomically.
                 $order->update([
                     'expires_at' => $expiresAt,
@@ -92,9 +94,11 @@ class PaymentService
                     ]
                 );
 
-                ExpireUnpaidOrder::dispatch($order->id)
-                    ->onConnection('database')
-                    ->delay($expiresAt);
+                if (!$previousExpiresAt || abs($previousExpiresAt->diffInSeconds($expiresAt, false)) > 10) {
+                    ExpireUnpaidOrder::dispatch($order->id)
+                        ->onConnection('database')
+                        ->delay($expiresAt);
+                }
             });
 
             return $invoice;

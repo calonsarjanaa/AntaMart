@@ -13,6 +13,7 @@ use App\Models\Order;
 use App\Models\ProductVariant;
 use App\Services\CheckoutService;
 use App\Services\InventoryService;
+use App\Services\OrderExpiryService;
 use App\Services\PaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -334,7 +335,7 @@ class BrowserCheckoutController extends Controller
         ))->with('status', '[Mode Lokal] Simulasi pembayaran Xendit berhasil. Pesanan langsung diproses!');
     }
 
-    public function result(string $orderId, PaymentService $paymentService)
+    public function result(string $orderId, PaymentService $paymentService, OrderExpiryService $orderExpiryService)
     {
         $order = Order::query()
             ->whereKey($orderId)
@@ -343,6 +344,12 @@ class BrowserCheckoutController extends Controller
 
         if ($order->status === OrderStatus::PendingPayment && $order->payment?->xendit_invoice_id) {
             if ($paymentService->syncPaymentStatus($order)) {
+                $order->refresh()->load(['items', 'payment', 'shipment', 'refund', 'latestCancellationRequest']);
+            }
+        }
+
+        if ($order->status === OrderStatus::PendingPayment && $order->expires_at?->isPast()) {
+            if ($orderExpiryService->expireOrder($order)) {
                 $order->refresh()->load(['items', 'payment', 'shipment', 'refund', 'latestCancellationRequest']);
             }
         }
@@ -357,7 +364,7 @@ class BrowserCheckoutController extends Controller
         ]);
     }
 
-    public function retryResultPayment(string $orderId, PaymentService $paymentService)
+    public function retryResultPayment(string $orderId, PaymentService $paymentService, OrderExpiryService $orderExpiryService)
     {
         $order = Order::query()->whereKey($orderId)->with('payment')->firstOrFail();
 
@@ -370,8 +377,10 @@ class BrowserCheckoutController extends Controller
         }
 
         if ($order->expires_at && $order->expires_at->isPast()) {
+            $orderExpiryService->expireOrder($order);
+
             return redirect()->back()->withErrors([
-                'payment' => 'Batas waktu pembayaran telah lewat. Status pesanan sedang diperbarui; muat ulang halaman ini sebentar lagi.',
+                'payment' => 'Batas waktu pembayaran telah lewat. Pesanan telah ditandai kedaluwarsa dan stok dilepaskan.',
             ]);
         }
 
