@@ -43,7 +43,7 @@
                 <div class="payment-action-card">
                     <form method="post" action="{{ route('storefront.checkout.payment.cancel') }}" onsubmit="return confirm('Apakah Anda yakin ingin membatalkan pesanan ini dan mengembalikan barang ke keranjang belanja?');">
                         @csrf
-                        <button class="button button-danger-outline" type="submit">Batalkan Pesanan & Kembali ke Keranjang</button>
+                        <button class="button button-danger" type="submit">Batalkan Pesanan & Kembali ke Keranjang</button>
                     </form>
                     <p class="payment-action-hint">Batalkan pesanan ini, lepaskan cadangan stok, dan kembali ke keranjang untuk membuat pesanan baru.</p>
                 </div>

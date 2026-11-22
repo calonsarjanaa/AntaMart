@@ -17,40 +17,9 @@
         <div class="owner-order-grid">
             <div class="owner-order-main">
                 @if ($order->status->value === 'awaiting_confirmation')
-                    <section class="owner-panel" aria-labelledby="owner-order-confirm-title" style="border: 2px solid #2563eb; background: #f8fbff;">
-                        <div class="owner-panel-heading">
-                            <h2 id="owner-order-confirm-title">Konfirmasi Pesanan (Cek Stok Fisik)</h2>
-                            <x-status-badge status="awaiting_confirmation" />
-                        </div>
-                        <p style="margin-bottom: 14px;">
-                            Periksa ketersediaan stok barang di toko offline sebelum menerima pesanan ini.
-                            @if ($order->payment?->payment_method?->value === 'cod')
-                                Jika diterima, pesanan <strong>COD</strong> akan langsung masuk tahap diproses dan stok dikurangi.
-                            @else
-                                Jika diterima, sistem akan membuat tautan pembayaran <strong>QRIS (berlaku 60 menit)</strong> yang bisa langsung dibayar pembeli.
-                            @endif
-                        </p>
-                        <div class="owner-state-grid">
-                            <div class="owner-state-card">
-                                <span>Terima Pesanan</span>
-                                <small>Stok tersedia di toko dan pesanan siap dilanjutkan.</small>
-                                <form method="post" action="{{ route('owner.orders.accept', $order->id) }}" onsubmit="return confirm('Terima pesanan ini?');" style="margin-top: 10px;">
-                                    @csrf
-                                    <button class="button" type="submit" style="width: 100%; background: #16a34a; border-color: #16a34a;">Terima Pesanan</button>
-                                </form>
-                            </div>
-                            <div class="owner-state-card">
-                                <span>Tolak Pesanan</span>
-                                <form method="post" action="{{ route('owner.orders.reject', $order->id) }}" onsubmit="return confirm('Tolak pesanan ini? Cadangan stok akan dilepaskan.');" style="margin-top: 8px;">
-                                    @csrf
-                                    <label class="field-label" for="order-rejection-reason">Alasan penolakan <span class="required-mark" aria-hidden="true">*</span></label>
-                                    <textarea id="order-rejection-reason" name="rejection_reason" rows="2" maxlength="2000" placeholder="Contoh: Stok fisik di toko sedang habis." required>{{ old('rejection_reason') }}</textarea>
-                                    @error('rejection_reason')<p class="field-error">{{ $message }}</p>@enderror
-                                    <button class="button button-secondary" type="submit" style="margin-top: 8px; width: 100%; color: #b91c1c; border-color: #fca5a5;">Tolak Pesanan</button>
-                                </form>
-                            </div>
-                        </div>
-                    </section>
+                    <x-alert tone="info">
+                        <strong>Menunggu Konfirmasi Pesanan:</strong> Periksa ketersediaan stok fisik di toko offline, lalu gunakan tombol <strong>Terima Pesanan</strong> atau <strong>Tolak Pesanan</strong> di panel kanan.
+                    </x-alert>
                 @endif
 
                 @if ($order->rejection_reason)
@@ -113,27 +82,8 @@
                                 <small>Pembayaran: Bayar di tempat (COD)</small>
                                 @if ($order->payment->status->value === 'pending')<small>Uang tunai belum dikonfirmasi diterima.</small>@endif
                             @endif
-                                @if ($order->status->value === 'shipped' && !$order->shipment->delivered_at)
-                                    <form class="owner-shipment-action" method="post" action="{{ route('owner.orders.delivery.confirm', $order->id) }}" onsubmit="return confirm('Tandai pesanan ini telah diterima? Status akan berubah menjadi selesai.');">
-                                        @csrf
-                                    @if ($order->payment?->payment_method?->value === 'cod')
-                                        <label class="owner-cod-confirmation"><input type="checkbox" name="cash_received" value="1" required> Saya mengonfirmasi uang COD sebesar <x-price :amount="$order->payment->amount" /> telah diterima.</label>
-                                    @endif
-                                        <button class="button" type="submit">Tandai telah diterima</button>
-                                    </form>
-                                @endif
                             @else
                                 <span class="owner-muted">Belum dikirim</span>
-                                @if ($order->status->value === 'processing')
-                                    <form class="owner-shipment-action" method="post" action="{{ route('owner.orders.shipment.store', $order->id) }}" onsubmit="return confirm('Simpan resi dan tandai pesanan telah dikirim?');">
-                                        @csrf
-                                        <label class="field-label" for="tracking-number">Nomor resi <span class="required-mark" aria-hidden="true">*</span></label>
-                                        <input id="tracking-number" name="tracking_number" type="text" maxlength="255" value="{{ old('tracking_number') }}" required>
-                                        <label class="field-label" for="tracking-url">Tautan pelacakan <span>(opsional)</span></label>
-                                        <input id="tracking-url" name="tracking_url" type="url" maxlength="2048" value="{{ old('tracking_url') }}" placeholder="https://">
-                                        <button class="button" type="submit">Catat pengiriman</button>
-                                    </form>
-                                @endif
                             @endif
                         </div>
                     </div>
@@ -149,22 +99,6 @@
                                 <small>Alasan: {{ $order->latestCancellationRequest->reason }}</small>
                                 @if ($order->latestCancellationRequest->rejection_reason)<small>Catatan keputusan: {{ $order->latestCancellationRequest->rejection_reason }}</small>@endif
                                 <small>Diajukan {{ $order->latestCancellationRequest->created_at?->timezone(config('app.timezone'))->format('d M Y, H:i') }}</small>
-                                @if ($order->latestCancellationRequest->status->value === 'pending' && !$order->latestCancellationRequest->decided_at)
-                                    <div class="owner-cancellation-actions">
-                                        <form method="post" action="{{ route('owner.orders.cancellations.review', [$order->id, $order->latestCancellationRequest->id]) }}" onsubmit="return confirm('Setujui permintaan pembatalan ini? Pesanan akan dibatalkan.');">
-                                            @csrf
-                                            <input type="hidden" name="decision" value="approve">
-                                            <button class="button" type="submit">Setujui pembatalan</button>
-                                        </form>
-                                        <form method="post" action="{{ route('owner.orders.cancellations.review', [$order->id, $order->latestCancellationRequest->id]) }}" onsubmit="return confirm('Tolak permintaan pembatalan ini?');">
-                                            @csrf
-                                            <input type="hidden" name="decision" value="reject">
-                                            <label class="field-label" for="rejection-reason">Alasan penolakan <span class="required-mark" aria-hidden="true">*</span></label>
-                                            <textarea id="rejection-reason" name="rejection_reason" rows="3" maxlength="2000" required>{{ old('rejection_reason') }}</textarea>
-                                            <button class="button button-secondary" type="submit">Tolak permintaan</button>
-                                        </form>
-                                    </div>
-                                @endif
                             @else
                                 <span class="owner-muted">Tidak ada permintaan pembatalan</span>
                             @endif
@@ -179,7 +113,9 @@
                                 @if ($order->refund->status->value === 'refunded')
                                     <small>Dicatat oleh {{ $order->refund->refundedBy?->name ?? 'pemilik toko' }}</small>
                                     <p>Transfer dana dilakukan secara manual. Barang yang dipilih untuk stok ulang:</p>
-                                    @php($restockedItemIds = array_map('intval', $order->refund->resellable_item_ids ?? []))
+                                    @php
+                                        $restockedItemIds = array_map('intval', $order->refund->resellable_item_ids ?? []);
+                                    @endphp
                                     @if (count($restockedItemIds))
                                         <ul class="owner-refund-item-list">
                                             @foreach ($order->items->whereIn('id', $restockedItemIds) as $refundedItem)
@@ -191,55 +127,13 @@
                                     @endif
                                     @if ($order->refund->notes)<small>Catatan: {{ $order->refund->notes }}</small>@endif
                                 @else
-                                    <p>Transfer dana harus dilakukan secara manual. Setelah transfer selesai, catat penyelesaiannya di bawah.</p>
+                                    <p>Transfer dana dilakukan secara manual di luar aplikasi. Setelah selesai, catat penyelesaiannya lewat panel aksi di kanan.</p>
                                 @endif
                             @else
                                 <span class="owner-muted">Tidak ada catatan pengembalian dana</span>
                             @endif
                         </div>
                     </div>
-                    @if ($order->refund?->status->value === 'manual_refund_pending')
-                        <div class="owner-refund-form">
-                            <h3>Catat pengembalian dana selesai</h3>
-                            <p>Pastikan transfer dana sudah dilakukan di luar sistem sebelum menyimpan catatan ini.</p>
-                            <form method="post" action="{{ route('owner.orders.refund.mark-refunded', $order->id) }}" onsubmit="return confirm('Konfirmasi bahwa transfer dana sudah dilakukan? Sistem hanya mencatat penyelesaian ini.');">
-                                @csrf
-                                <fieldset class="owner-restock-options">
-                                    <legend>Pilih barang yang layak dijual kembali</legend>
-                                    @if (count($eligibleResellableItemIds))
-                                        @foreach ($order->items->whereIn('id', $eligibleResellableItemIds) as $restockItem)
-                                            <label class="owner-restock-option">
-                                                <input type="checkbox" name="resellable_item_ids[]" value="{{ $restockItem->id }}" @checked(in_array($restockItem->id, old('resellable_item_ids', [])))>
-                                                <span>{{ $restockItem->product_snapshot['name'] ?? 'Produk' }} · {{ $restockItem->variant_snapshot['name'] ?? 'Varian' }} <small>{{ $restockItem->quantity }} unit</small></span>
-                                            </label>
-                                        @endforeach
-                                        <small>Stok hanya ditambahkan untuk barang yang dipilih.</small>
-                                    @else
-                                        <p class="owner-muted">Tidak ada barang yang memenuhi syarat stok ulang untuk pesanan ini.</p>
-                                    @endif
-                                </fieldset>
-                                <label class="field-label" for="refund-notes">Catatan transfer manual <span>(opsional)</span></label>
-                                <textarea id="refund-notes" name="notes" rows="3" maxlength="5000">{{ old('notes') }}</textarea>
-                                <button class="button" type="submit">Simpan catatan pengembalian dana</button>
-                            </form>
-                        </div>
-                    @endif
-                    @if (in_array($order->status->value, ['pending_payment', 'processing', 'shipped'], true))
-                        <div class="owner-cancel-order">
-                            <h3>Batalkan pesanan sebagai pemilik</h3>
-                            @if ($order->status->value === 'pending_payment')
-                                <x-alert tone="info">Pesanan belum dibayar. Pembatalan akan langsung mengunci tautan pembayaran QRIS dan melepaskan cadangan stok.</x-alert>
-                            @elseif ($order->payment?->status->value === 'paid')
-                                <x-alert tone="warning">Pembayaran sudah diterima. Proses pengembalian dana (refund) dilakukan di luar aplikasi dan dapat dicatat secara manual setelah selesai.</x-alert>
-                            @endif
-                            <form method="post" action="{{ route('owner.orders.cancel', $order->id) }}" onsubmit="return confirm('Batalkan pesanan ini? Tindakan ini tidak dapat dibatalkan.');">
-                                @csrf
-                                <label class="field-label" for="owner-cancel-reason">Alasan pembatalan <span class="required-mark" aria-hidden="true">*</span></label>
-                                <textarea id="owner-cancel-reason" name="reason" rows="3" maxlength="2000" required>{{ old('reason') }}</textarea>
-                                <button class="button" type="submit">Batalkan pesanan</button>
-                            </form>
-                        </div>
-                    @endif
                 </section>
 
                 <section class="owner-panel" aria-labelledby="owner-order-activity-title">
@@ -285,6 +179,55 @@
                     <p class="owner-muted">Alamat tidak tersedia.</p>
                 @endif
 
+                @php
+                    $canAcceptOrReject = $order->status->value === 'awaiting_confirmation';
+                    $canShip = $order->status->value === 'processing' && !$order->shipment;
+                    $canConfirmDelivery = $order->status->value === 'shipped' && $order->shipment && !$order->shipment->delivered_at;
+                    $hasPendingCancelReview = $order->latestCancellationRequest && $order->latestCancellationRequest->status->value === 'pending' && !$order->latestCancellationRequest->decided_at;
+                    $canMarkRefunded = $order->refund?->status->value === 'manual_refund_pending';
+                    $canOwnerCancel = in_array($order->status->value, ['pending_payment', 'processing', 'shipped'], true);
+                    $hasAnyOwnerAction = $canAcceptOrReject || $canShip || $canConfirmDelivery || $hasPendingCancelReview || $canMarkRefunded || $canOwnerCancel;
+                @endphp
+
+                @if ($hasAnyOwnerAction)
+                    <hr>
+                    <h3>Aksi pesanan</h3>
+                    <div class="sidebar-actions">
+                        @if ($canAcceptOrReject)
+                            <form method="post" action="{{ route('owner.orders.accept', $order->id) }}" onsubmit="return confirm('Terima pesanan ini?');">
+                                @csrf
+                                <button class="button button-primary" type="submit">Terima Pesanan</button>
+                            </form>
+                            <button class="button button-danger" type="button" data-open-modal="modal-owner-reject">Tolak Pesanan</button>
+                        @endif
+
+                        @if ($canShip)
+                            <button class="button button-primary" type="button" data-open-modal="modal-owner-shipment">Catat pengiriman</button>
+                        @endif
+
+                        @if ($canConfirmDelivery)
+                            <button class="button button-primary" type="button" data-open-modal="modal-owner-delivery">Tandai telah diterima</button>
+                        @endif
+
+                        @if ($hasPendingCancelReview)
+                            <form method="post" action="{{ route('owner.orders.cancellations.review', [$order->id, $order->latestCancellationRequest->id]) }}" onsubmit="return confirm('Setujui permintaan pembatalan ini? Pesanan akan dibatalkan.');">
+                                @csrf
+                                <input type="hidden" name="decision" value="approve">
+                                <button class="button button-primary" type="submit">Setujui pembatalan</button>
+                            </form>
+                            <button class="button button-danger" type="button" data-open-modal="modal-owner-reject-cancel">Tolak permintaan</button>
+                        @endif
+
+                        @if ($canMarkRefunded)
+                            <button class="button button-primary" type="button" data-open-modal="modal-owner-refund">Catat pengembalian dana</button>
+                        @endif
+
+                        @if ($canOwnerCancel)
+                            <button class="button button-danger" type="button" data-open-modal="modal-owner-cancel">Batalkan pesanan</button>
+                        @endif
+                    </div>
+                @endif
+
                 @if (!empty($whatsAppNotification))
                     <hr>
                     <h3>Notifikasi WhatsApp</h3>
@@ -294,7 +237,7 @@
                         href="{{ $whatsAppNotification['url'] }}"
                         target="_blank"
                         rel="noopener noreferrer"
-                        style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background: #16a34a; border-color: #16a34a; color: #ffffff; text-decoration: none;"
+                        style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background: #16a34a; border-color: #16a34a; color: #ffffff; text-decoration: none; border-radius: 6px;"
                     >
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/>
@@ -304,5 +247,168 @@
                 @endif
             </aside>
         </div>
+
+        {{-- Modals for Owner Actions --}}
+        @if ($canAcceptOrReject)
+            <dialog id="modal-owner-reject" class="action-modal" aria-labelledby="modal-owner-reject-title">
+                <div class="action-modal-header">
+                    <h3 id="modal-owner-reject-title">Tolak Pesanan</h3>
+                    <button type="button" class="action-modal-close" data-close-modal aria-label="Tutup">&times;</button>
+                </div>
+                <form method="post" action="{{ route('owner.orders.reject', $order->id) }}">
+                    @csrf
+                    <div class="action-modal-body">
+                        <p>Cadangan stok akan langsung dilepaskan dan alasan penolakan akan ditampilkan kepada pembeli.</p>
+                        <div class="form-field">
+                            <label class="field-label" for="order-rejection-reason">Alasan penolakan <span class="required-mark" aria-hidden="true">*</span></label>
+                            <textarea id="order-rejection-reason" name="rejection_reason" maxlength="2000" placeholder="Contoh: Stok fisik di toko sedang habis." required>{{ old('rejection_reason') }}</textarea>
+                            @error('rejection_reason')<p class="field-error">{{ $message }}</p>@enderror
+                        </div>
+                    </div>
+                    <div class="action-modal-footer">
+                        <button type="button" class="button button-secondary" data-close-modal>Batal</button>
+                        <button type="submit" class="button button-danger">Konfirmasi Penolakan</button>
+                    </div>
+                </form>
+            </dialog>
+        @endif
+
+        @if ($canShip)
+            <dialog id="modal-owner-shipment" class="action-modal" aria-labelledby="modal-owner-shipment-title">
+                <div class="action-modal-header">
+                    <h3 id="modal-owner-shipment-title">Catat Pengiriman</h3>
+                    <button type="button" class="action-modal-close" data-close-modal aria-label="Tutup">&times;</button>
+                </div>
+                <form method="post" action="{{ route('owner.orders.shipment.store', $order->id) }}">
+                    @csrf
+                    <div class="action-modal-body">
+                        <div class="form-field">
+                            <label class="field-label" for="tracking-number">Nomor resi <span class="required-mark" aria-hidden="true">*</span></label>
+                            <input id="tracking-number" name="tracking_number" type="text" maxlength="255" value="{{ old('tracking_number') }}" required>
+                        </div>
+                        <div class="form-field">
+                            <label class="field-label" for="tracking-url">Tautan pelacakan <span>(opsional)</span></label>
+                            <input id="tracking-url" name="tracking_url" type="url" maxlength="2048" value="{{ old('tracking_url') }}" placeholder="https://">
+                        </div>
+                    </div>
+                    <div class="action-modal-footer">
+                        <button type="button" class="button button-secondary" data-close-modal>Batal</button>
+                        <button type="submit" class="button button-primary">Simpan & Kirim</button>
+                    </div>
+                </form>
+            </dialog>
+        @endif
+
+        @if ($canConfirmDelivery)
+            <dialog id="modal-owner-delivery" class="action-modal" aria-labelledby="modal-owner-delivery-title">
+                <div class="action-modal-header">
+                    <h3 id="modal-owner-delivery-title">Konfirmasi Pesanan Diterima</h3>
+                    <button type="button" class="action-modal-close" data-close-modal aria-label="Tutup">&times;</button>
+                </div>
+                <form method="post" action="{{ route('owner.orders.delivery.confirm', $order->id) }}">
+                    @csrf
+                    <div class="action-modal-body">
+                        <p>Status pesanan akan berubah menjadi <strong>Completed (Selesai)</strong>.</p>
+                        @if ($order->payment?->payment_method?->value === 'cod')
+                            <label class="owner-cod-confirmation" style="cursor: pointer;">
+                                <input type="checkbox" name="cash_received" value="1" required>
+                                <span>Saya mengonfirmasi uang COD sebesar <x-price :amount="$order->payment->amount" /> telah diterima.</span>
+                            </label>
+                        @endif
+                    </div>
+                    <div class="action-modal-footer">
+                        <button type="button" class="button button-secondary" data-close-modal>Batal</button>
+                        <button type="submit" class="button button-primary">Konfirmasi Diterima</button>
+                    </div>
+                </form>
+            </dialog>
+        @endif
+
+        @if ($hasPendingCancelReview)
+            <dialog id="modal-owner-reject-cancel" class="action-modal" aria-labelledby="modal-owner-reject-cancel-title">
+                <div class="action-modal-header">
+                    <h3 id="modal-owner-reject-cancel-title">Tolak Permintaan Pembatalan</h3>
+                    <button type="button" class="action-modal-close" data-close-modal aria-label="Tutup">&times;</button>
+                </div>
+                <form method="post" action="{{ route('owner.orders.cancellations.review', [$order->id, $order->latestCancellationRequest->id]) }}">
+                    @csrf
+                    <input type="hidden" name="decision" value="reject">
+                    <div class="action-modal-body">
+                        <div class="form-field">
+                            <label class="field-label" for="rejection-reason">Alasan penolakan <span class="required-mark" aria-hidden="true">*</span></label>
+                            <textarea id="rejection-reason" name="rejection_reason" maxlength="2000" required>{{ old('rejection_reason') }}</textarea>
+                        </div>
+                    </div>
+                    <div class="action-modal-footer">
+                        <button type="button" class="button button-secondary" data-close-modal>Batal</button>
+                        <button type="submit" class="button button-danger">Konfirmasi Penolakan</button>
+                    </div>
+                </form>
+            </dialog>
+        @endif
+
+        @if ($canMarkRefunded)
+            <dialog id="modal-owner-refund" class="action-modal" aria-labelledby="modal-owner-refund-title">
+                <div class="action-modal-header">
+                    <h3 id="modal-owner-refund-title">Catat Pengembalian Dana Selesai</h3>
+                    <button type="button" class="action-modal-close" data-close-modal aria-label="Tutup">&times;</button>
+                </div>
+                <form method="post" action="{{ route('owner.orders.refund.mark-refunded', $order->id) }}">
+                    @csrf
+                    <div class="action-modal-body">
+                        <p>Pastikan transfer dana sudah dilakukan di luar aplikasi sebelum menyimpan catatan ini.</p>
+                        <fieldset class="owner-restock-options">
+                            <legend>Pilih barang yang layak dijual kembali</legend>
+                            @if (count($eligibleResellableItemIds))
+                                @foreach ($order->items->whereIn('id', $eligibleResellableItemIds) as $restockItem)
+                                    <label class="owner-restock-option" style="cursor: pointer;">
+                                        <input type="checkbox" name="resellable_item_ids[]" value="{{ $restockItem->id }}" @checked(in_array($restockItem->id, old('resellable_item_ids', [])))>
+                                        <span>{{ $restockItem->product_snapshot['name'] ?? 'Produk' }} · {{ $restockItem->variant_snapshot['name'] ?? 'Varian' }} <small>{{ $restockItem->quantity }} unit</small></span>
+                                    </label>
+                                @endforeach
+                                <small>Stok hanya ditambahkan untuk barang yang dipilih.</small>
+                            @else
+                                <p class="owner-muted">Tidak ada barang yang memenuhi syarat stok ulang untuk pesanan ini.</p>
+                            @endif
+                        </fieldset>
+                        <div class="form-field">
+                            <label class="field-label" for="refund-notes">Catatan transfer manual <span>(opsional)</span></label>
+                            <textarea id="refund-notes" name="notes" maxlength="5000">{{ old('notes') }}</textarea>
+                        </div>
+                    </div>
+                    <div class="action-modal-footer">
+                        <button type="button" class="button button-secondary" data-close-modal>Batal</button>
+                        <button type="submit" class="button button-primary">Simpan Catatan Refund</button>
+                    </div>
+                </form>
+            </dialog>
+        @endif
+
+        @if ($canOwnerCancel)
+            <dialog id="modal-owner-cancel" class="action-modal" aria-labelledby="modal-owner-cancel-title">
+                <div class="action-modal-header">
+                    <h3 id="modal-owner-cancel-title">Batalkan Pesanan</h3>
+                    <button type="button" class="action-modal-close" data-close-modal aria-label="Tutup">&times;</button>
+                </div>
+                <form method="post" action="{{ route('owner.orders.cancel', $order->id) }}">
+                    @csrf
+                    <div class="action-modal-body">
+                        @if ($order->status->value === 'pending_payment')
+                            <x-alert tone="info" style="width: 100%; margin: 0;">Pesanan belum dibayar. Pembatalan akan langsung mengunci tautan pembayaran QRIS dan melepaskan cadangan stok.</x-alert>
+                        @elseif ($order->payment?->status->value === 'paid')
+                            <x-alert tone="warning" style="width: 100%; margin: 0;">Pembayaran sudah diterima. Proses pengembalian dana (refund) dilakukan di luar aplikasi.</x-alert>
+                        @endif
+                        <div class="form-field">
+                            <label class="field-label" for="owner-cancel-reason">Alasan pembatalan <span class="required-mark" aria-hidden="true">*</span></label>
+                            <textarea id="owner-cancel-reason" name="reason" maxlength="2000" required>{{ old('reason') }}</textarea>
+                        </div>
+                    </div>
+                    <div class="action-modal-footer">
+                        <button type="button" class="button button-secondary" data-close-modal>Batal</button>
+                        <button type="submit" class="button button-danger">Konfirmasi Pembatalan</button>
+                    </div>
+                </form>
+            </dialog>
+        @endif
     </section>
 @endsection
