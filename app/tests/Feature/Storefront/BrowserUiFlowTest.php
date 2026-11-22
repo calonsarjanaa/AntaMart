@@ -308,3 +308,87 @@ test('checkout page renders toggle switch with previous checkout address for ret
         ->assertSee('Jl. Kebon Jeruk No. 5')
         ->assertSee('11530');
 });
+
+test('customer can switch to COD or cancel pending xendit order directly from checkout result page', function () {
+    Http::fake([
+        'https://api.xendit.co/v2/invoices/*' => Http::response([
+            'id' => 'inv_pending',
+            'status' => 'PENDING',
+            'amount' => 25000,
+        ], 200),
+    ]);
+
+    // 1. Create pending Xendit order and cancel from result page
+    $order1 = ($this->makeOrder)('result-cancel-key', OrderStatus::PendingPayment);
+    $order1->update(['expires_at' => now()->addMinutes(10)]);
+    Payment::create([
+        'order_id' => $order1->id,
+        'payment_method' => \App\Enums\PaymentMethod::Xendit,
+        'amount' => 25000,
+        'status' => PaymentStatus::Pending,
+        'xendit_invoice_id' => 'inv_result_cancel_1',
+        'xendit_payment_url' => 'https://checkout.xendit.co/web/inv_result_cancel_1',
+        'expired_at' => now()->addMinutes(10),
+    ]);
+    OrderItem::create([
+        'order_id' => $order1->id,
+        'product_id' => $this->variant->product_id,
+        'product_variant_id' => $this->variant->id,
+        'product_snapshot' => ['name' => 'UI Test Mug'],
+        'variant_snapshot' => ['name' => 'Default'],
+        'sku' => $this->variant->sku,
+        'quantity' => 1,
+        'unit_price' => 25000,
+        'subtotal' => 25000,
+    ]);
+    $this->variant->update(['stock_reserved' => 1]);
+    \App\Models\InventoryReservation::create([
+        'order_id' => $order1->id,
+        'product_variant_id' => $this->variant->id,
+        'quantity' => 1,
+        'status' => 'reserved',
+        'reserved_at' => now(),
+    ]);
+
+    $resultUrl1 = URL::temporarySignedRoute('storefront.checkout.result', now()->addDay(), ['orderId' => $order1->id]);
+    $this->get($resultUrl1)
+        ->assertOk()
+        ->assertSee('Beralih ke Bayar di Tempat (COD)')
+        ->assertSee('Batalkan Pesanan');
+
+    $cancelUrl1 = URL::temporarySignedRoute('storefront.checkout.result.cancel', now()->addDay(), ['orderId' => $order1->id]);
+    $this->post($cancelUrl1)->assertRedirect(route('storefront.cart.index'));
+
+    expect($order1->fresh()->status)->toBe(OrderStatus::Expired)
+        ->and($this->variant->fresh()->stock_reserved)->toBe(0)
+        ->and(session('cart'))->toBe([$this->variant->id => 1]);
+
+    // 2. Create pending Xendit order and switch to COD from result page
+    $order2 = ($this->makeOrder)('result-cod-key', OrderStatus::PendingPayment);
+    $order2->update(['expires_at' => now()->addMinutes(10)]);
+    Payment::create([
+        'order_id' => $order2->id,
+        'payment_method' => \App\Enums\PaymentMethod::Xendit,
+        'amount' => 25000,
+        'status' => PaymentStatus::Pending,
+        'xendit_invoice_id' => 'inv_result_cod_2',
+        'xendit_payment_url' => 'https://checkout.xendit.co/web/inv_result_cod_2',
+        'expired_at' => now()->addMinutes(10),
+    ]);
+    $this->variant->refresh()->update(['stock_reserved' => 1]);
+    \App\Models\InventoryReservation::create([
+        'order_id' => $order2->id,
+        'product_variant_id' => $this->variant->id,
+        'quantity' => 1,
+        'status' => 'reserved',
+        'reserved_at' => now(),
+    ]);
+
+    $switchCodUrl2 = URL::temporarySignedRoute('storefront.checkout.result.switch-cod', now()->addDay(), ['orderId' => $order2->id]);
+    $this->post($switchCodUrl2)->assertRedirect();
+
+    expect($order2->fresh()->status)->toBe(OrderStatus::Processing)
+        ->and($order2->fresh()->payment->payment_method)->toBe(\App\Enums\PaymentMethod::CashOnDelivery)
+        ->and($this->variant->fresh()->stock_reserved)->toBe(0)
+        ->and($this->variant->fresh()->stock_physical)->toBe(7);
+});

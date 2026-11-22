@@ -376,7 +376,139 @@ class BrowserCheckoutController extends Controller
                 now()->addDays(3),
                 ['orderId' => $order->id]
             ),
+            'switchCodUrl' => URL::temporarySignedRoute(
+                'storefront.checkout.result.switch-cod',
+                now()->addDays(3),
+                ['orderId' => $order->id]
+            ),
+            'cancelUrl' => URL::temporarySignedRoute(
+                'storefront.checkout.result.cancel',
+                now()->addDays(3),
+                ['orderId' => $order->id]
+            ),
         ]);
+    }
+
+    public function switchResultToCod(
+        string $orderId,
+        PaymentService $paymentService,
+        InventoryService $inventoryService,
+        OrderExpiryService $orderExpiryService
+    ) {
+        $order = Order::query()->whereKey($orderId)->with(['items', 'payment'])->firstOrFail();
+
+        if ($order->status === OrderStatus::PendingPayment && $order->payment?->xendit_invoice_id) {
+            if ($paymentService->syncPaymentStatus($order)) {
+                return redirect()->to(URL::temporarySignedRoute(
+                    'storefront.checkout.result',
+                    now()->addDays(3),
+                    ['orderId' => $order->id]
+                ))->with('status', 'Pembayaran Xendit sudah dikonfirmasi. Pesanan sedang diproses!');
+            }
+        }
+
+        if ($order->status === OrderStatus::PendingPayment && $order->expires_at?->isPast()) {
+            $orderExpiryService->expireOrder($order);
+
+            return redirect()->back()->withErrors([
+                'payment' => 'Batas waktu pembayaran telah lewat sehingga tidak dapat dialihkan ke COD.',
+            ]);
+        }
+
+        if ($order->status !== OrderStatus::PendingPayment) {
+            return redirect()->back()->with('status', 'Status pesanan sudah berubah dan tidak dapat dialihkan ke COD.');
+        }
+
+        DB::transaction(function () use ($order, $inventoryService): void {
+            $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            if ($lockedOrder->status !== OrderStatus::PendingPayment) {
+                return;
+            }
+
+            $payment = $lockedOrder->payment()->lockForUpdate()->first();
+            if ($payment) {
+                $payment->update([
+                    'payment_method' => PaymentMethod::CashOnDelivery,
+                    'status' => PaymentStatus::Pending,
+                    'expired_at' => null,
+                ]);
+            }
+
+            $lockedOrder->update(['expires_at' => null]);
+            $lockedOrder->transitionTo(OrderStatus::Processing);
+            $inventoryService->convertReservationsToPhysicalDeduction($lockedOrder);
+
+            AuditEvent::dispatch(
+                'payment.cod_order_created',
+                $lockedOrder->id,
+                $lockedOrder->customer_id,
+                $lockedOrder->customer_id ? 'customer' : 'guest',
+                ['amount' => $lockedOrder->total, 'switched_from' => 'xendit_result']
+            );
+        });
+
+        return redirect()->to(URL::temporarySignedRoute(
+            'storefront.checkout.result',
+            now()->addDays(3),
+            ['orderId' => $order->id]
+        ))->with('status', 'Metode pembayaran berhasil dialihkan ke Bayar di Tempat (COD). Pesanan sedang kami proses!');
+    }
+
+    public function cancelResultPending(
+        string $orderId,
+        PaymentService $paymentService,
+        InventoryService $inventoryService
+    ) {
+        $order = Order::query()->whereKey($orderId)->with(['items', 'payment'])->firstOrFail();
+
+        if ($order->status === OrderStatus::PendingPayment && $order->payment?->xendit_invoice_id) {
+            if ($paymentService->syncPaymentStatus($order)) {
+                return redirect()->to(URL::temporarySignedRoute(
+                    'storefront.checkout.result',
+                    now()->addDays(3),
+                    ['orderId' => $order->id]
+                ))->with('status', 'Pembayaran Xendit sudah dikonfirmasi sehingga pesanan tidak dibatalkan.');
+            }
+        }
+
+        if ($order->status !== OrderStatus::PendingPayment) {
+            return redirect()->back()->with('status', 'Status pesanan sudah berubah dan tidak dapat dibatalkan dari halaman ini.');
+        }
+
+        DB::transaction(function () use ($order, $inventoryService): void {
+            $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            if ($lockedOrder->status !== OrderStatus::PendingPayment) {
+                return;
+            }
+
+            $lockedOrder->transitionTo(OrderStatus::Expired);
+
+            $payment = $lockedOrder->payment()->lockForUpdate()->first();
+            if ($payment && $payment->status === PaymentStatus::Pending) {
+                $payment->status = PaymentStatus::Expired;
+                $payment->save();
+            }
+
+            $inventoryService->releaseReservations($lockedOrder);
+            PaymentExpired::dispatch($lockedOrder);
+
+            AuditEvent::dispatch(
+                'order.cancelled_by_customer',
+                $lockedOrder->id,
+                $lockedOrder->customer_id,
+                $lockedOrder->customer_id ? 'customer' : 'guest',
+                ['reason' => 'cancelled_from_result_page']
+            );
+        });
+
+        $cart = session('cart', []);
+        foreach ($order->items as $item) {
+            $cart[$item->product_variant_id] = max((int) ($cart[$item->product_variant_id] ?? 0), $item->quantity);
+        }
+        session(['cart' => $cart]);
+
+        return redirect()->route('storefront.cart.index')
+            ->with('status', 'Pesanan berhasil dibatalkan, stok dilepas, dan produk dikembalikan ke keranjang Anda.');
     }
 
     public function retryResultPayment(string $orderId, PaymentService $paymentService, OrderExpiryService $orderExpiryService)
