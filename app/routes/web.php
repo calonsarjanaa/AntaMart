@@ -42,6 +42,7 @@ Route::post('/checkout/payment/switch-cod', [BrowserCheckoutController::class, '
 Route::post('/checkout/payment/cancel', [BrowserCheckoutController::class, 'cancelPending'])->name('storefront.checkout.payment.cancel');
 Route::post('/checkout/payment/dev-simulate', [BrowserCheckoutController::class, 'devSimulatePayment'])->name('storefront.checkout.payment.dev-simulate');
 Route::get('/checkout/result/{orderId}', [BrowserCheckoutController::class, 'result'])->middleware('signed')->name('storefront.checkout.result');
+Route::get('/checkout/result/{orderId}/pay', [BrowserCheckoutController::class, 'payResult'])->middleware('signed')->name('storefront.checkout.result.pay');
 Route::post('/checkout/result/{orderId}/retry', [BrowserCheckoutController::class, 'retryResultPayment'])->middleware('signed')->name('storefront.checkout.result.retry');
 Route::post('/checkout/result/{orderId}/switch-cod', [BrowserCheckoutController::class, 'switchResultToCod'])->middleware('signed')->name('storefront.checkout.result.switch-cod');
 Route::post('/checkout/result/{orderId}/cancel', [BrowserCheckoutController::class, 'cancelResultPending'])->middleware('signed')->name('storefront.checkout.result.cancel');
@@ -66,6 +67,7 @@ Route::middleware(['auth:web', 'role:customer'])->prefix('/account')->name('stor
     Route::post('/logout', [CustomerAuthController::class, 'logout'])->name('logout');
     Route::get('/orders', [CustomerOrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{orderId}', [CustomerOrderController::class, 'show'])->name('orders.show');
+    Route::get('/orders/{orderId}/pay', [CustomerOrderController::class, 'pay'])->name('orders.pay');
     Route::post('/orders/{orderId}/cancellation-requests', [CustomerOrderController::class, 'requestCancellation'])->name('orders.cancellation.store');
     Route::post('/orders/{orderId}/cancellation-requests/{requestId}/withdraw', [CustomerOrderController::class, 'withdrawCancellation'])->name('orders.cancellation.withdraw');
 });

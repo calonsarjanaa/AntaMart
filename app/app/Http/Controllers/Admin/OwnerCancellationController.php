@@ -17,7 +17,7 @@ class OwnerCancellationController extends Controller
             ->with(['order.customer', 'requester'])
             ->where('status', CancellationStatus::Pending->value)
             ->whereNull('decided_at')
-            ->whereHas('order', fn ($orders) => $orders->where('status', 'processing'))
+            ->whereHas('order', fn ($orders) => $orders->whereIn('status', ['processing', 'shipped']))
             ->oldest()
             ->paginate(20);
 

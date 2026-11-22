@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\CancellationStatus;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
@@ -22,6 +23,12 @@ class ShipmentService
             if ($order->status !== OrderStatus::Processing) {
                 throw ValidationException::withMessages([
                     'order' => 'Only processing orders can be shipped.',
+                ]);
+            }
+
+            if ($order->cancellationRequests()->where('status', CancellationStatus::Pending->value)->exists()) {
+                throw ValidationException::withMessages([
+                    'order' => 'Tinjau (setujui atau tolak) permintaan pembatalan yang sedang menunggu sebelum mencatat pengiriman.',
                 ]);
             }
 

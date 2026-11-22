@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Adapters\Payment\PaymentGatewayInterface;
 use App\Enums\CancellationStatus;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
@@ -15,20 +16,76 @@ use Illuminate\Validation\ValidationException;
 
 class CancellationService
 {
+    public const MAX_CUSTOMER_REQUESTS = 3;
+
     public function __construct(
         protected RefundService $refundService,
-        protected InventoryService $inventoryService
-    ) {}
+        protected InventoryService $inventoryService,
+        protected ?PaymentService $paymentService = null,
+        protected ?PaymentGatewayInterface $paymentGateway = null
+    ) {
+        $this->paymentService = $paymentService ?? app(PaymentService::class);
+        $this->paymentGateway = $paymentGateway ?? app(PaymentGatewayInterface::class);
+    }
 
     public function submitRequest(Order $order, ?User $user, ?string $guestEmail, string $reason): CancellationRequestModel
     {
-        return DB::transaction(function () use ($order, $user, $guestEmail, $reason): CancellationRequestModel {
+        $order->loadMissing('payment');
+        if ($order->status === OrderStatus::PendingPayment && $order->payment?->xendit_invoice_id) {
+            $this->paymentService->syncPaymentStatus($order);
+        }
+
+        $invoiceToExpire = null;
+
+        $result = DB::transaction(function () use ($order, $user, $guestEmail, $reason, &$invoiceToExpire): CancellationRequestModel {
             $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
             $this->authorizeCustomerOrGuest($order, $user, $guestEmail);
 
-            if ($order->status !== OrderStatus::Processing) {
+            $payment = $order->payment()->lockForUpdate()->first();
+            $isPaymentPending = !$payment || $payment->status === PaymentStatus::Pending;
+
+            // Rule 1a: awaiting_confirmation or pending_payment (payment pending) -> direct cancel without owner approval
+            if (
+                $order->status === OrderStatus::AwaitingConfirmation
+                || ($order->status === OrderStatus::PendingPayment && $isPaymentPending)
+            ) {
+                $invoiceToExpire = $payment?->xendit_invoice_id;
+
+                $order->transitionTo(OrderStatus::Cancelled);
+
+                if ($payment && $payment->status === PaymentStatus::Pending) {
+                    $payment->status = PaymentStatus::Expired;
+                    $payment->save();
+                }
+
+                $this->inventoryService->releaseReservations($order);
+
+                $cancellationRequest = $order->cancellationRequests()->create([
+                    'requested_by' => $user?->id,
+                    'reason'       => trim($reason),
+                    'status'       => CancellationStatus::Approved,
+                    'decided_at'   => now(),
+                ]);
+
+                AuditEvent::dispatch(
+                    'order.cancelled_by_customer',
+                    $order->id,
+                    $user?->id,
+                    $user?->role ?? 'guest',
+                    [
+                        'cancellation_request_id' => $cancellationRequest->id,
+                        'reason'                  => $cancellationRequest->reason,
+                        'direct_cancel'           => true,
+                    ]
+                );
+
+                return $cancellationRequest;
+            }
+
+            // Rule 1b: processing or shipped -> requires owner approval, max 3 requests per order
+            if (!in_array($order->status, [OrderStatus::Processing, OrderStatus::Shipped], true)) {
                 throw ValidationException::withMessages([
-                    'order' => 'Cancellation can only be requested for processing orders.',
+                    'order' => 'Pesanan dengan status ini tidak dapat dibatalkan.',
                 ]);
             }
 
@@ -38,13 +95,20 @@ class CancellationService
 
             if ($hasPendingRequest) {
                 throw ValidationException::withMessages([
-                    'cancellation_request' => 'This order already has a pending cancellation request.',
+                    'cancellation_request' => 'Pesanan ini masih memiliki permintaan pembatalan yang menunggu tinjauan toko.',
+                ]);
+            }
+
+            $totalAttempts = $order->cancellationRequests()->count();
+            if ($totalAttempts >= self::MAX_CUSTOMER_REQUESTS) {
+                throw ValidationException::withMessages([
+                    'cancellation_request' => 'Batas maksimal pengajuan pembatalan (3 kali) untuk pesanan ini telah tercapai.',
                 ]);
             }
 
             $cancellationRequest = $order->cancellationRequests()->create([
                 'requested_by' => $user?->id,
-                'reason'       => $reason,
+                'reason'       => trim($reason),
                 'status'       => CancellationStatus::Pending,
             ]);
 
@@ -58,6 +122,12 @@ class CancellationService
 
             return $cancellationRequest;
         });
+
+        if ($invoiceToExpire && method_exists($this->paymentGateway, 'expireInvoice')) {
+            $this->paymentGateway->expireInvoice($invoiceToExpire);
+        }
+
+        return $result;
     }
 
     public function withdrawRequest(Order $order, int $requestId, ?User $user, ?string $guestEmail): CancellationRequestModel
@@ -143,9 +213,32 @@ class CancellationService
 
     public function cancelByOwner(Order $order, User $owner, string $reason): CancellationRequestModel
     {
-        return DB::transaction(function () use ($order, $owner, $reason): CancellationRequestModel {
+        $order->loadMissing('payment');
+        if ($order->status === OrderStatus::PendingPayment && $order->payment?->xendit_invoice_id) {
+            $this->paymentService->syncPaymentStatus($order);
+        }
+
+        $invoiceToExpire = null;
+
+        $cancellationRequest = DB::transaction(function () use ($order, $owner, $reason, &$invoiceToExpire): CancellationRequestModel {
             $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
-            $this->cancelProcessingOrder($order, $reason, $owner);
+            $payment = $order->payment()->lockForUpdate()->first();
+
+            if ($order->status === OrderStatus::PendingPayment && (!$payment || $payment->status === PaymentStatus::Pending)) {
+                $invoiceToExpire = $payment?->xendit_invoice_id;
+                $order->rejection_reason = trim($reason);
+                $order->rejected_at = now();
+                $order->transitionTo(OrderStatus::Cancelled);
+
+                if ($payment && $payment->status === PaymentStatus::Pending) {
+                    $payment->status = PaymentStatus::Expired;
+                    $payment->save();
+                }
+
+                $this->inventoryService->releaseReservations($order);
+            } else {
+                $this->cancelProcessingOrder($order, $reason, $owner);
+            }
 
             $now = now();
 
@@ -174,7 +267,7 @@ class CancellationService
 
             $cancellationRequest = $order->cancellationRequests()->create([
                 'requested_by' => null,
-                'reason'       => $reason,
+                'reason'       => trim($reason),
                 'status'       => CancellationStatus::Approved,
                 'decided_by'   => $owner->id,
                 'decided_at'   => $now,
@@ -193,13 +286,19 @@ class CancellationService
 
             return $cancellationRequest;
         });
+
+        if ($invoiceToExpire && method_exists($this->paymentGateway, 'expireInvoice')) {
+            $this->paymentGateway->expireInvoice($invoiceToExpire);
+        }
+
+        return $cancellationRequest;
     }
 
     private function cancelProcessingOrder(Order $order, string $reason, User $actor): void
     {
-        if ($order->status !== OrderStatus::Processing) {
+        if (!in_array($order->status, [OrderStatus::Processing, OrderStatus::Shipped], true)) {
             throw ValidationException::withMessages([
-                'order' => 'Only processing orders can be cancelled.',
+                'order' => 'Hanya pesanan berstatus Diproses atau Dikirim yang dapat dibatalkan melalui alur ini.',
             ]);
         }
 

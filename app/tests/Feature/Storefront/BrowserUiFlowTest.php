@@ -120,7 +120,10 @@ test('guest can browse, add to cart, check out, hand off payment, and track the 
         ->assertOk()
         ->assertSee($order->id)
         ->assertSee('Bayar Pesanan')
-        ->assertSee('https://checkout.xendit.test/inv_ui_test', false);
+        ->assertSee("/checkout/result/{$order->id}/pay", false);
+
+    $payUrl = URL::temporarySignedRoute('storefront.checkout.result.pay', now()->addDay(), ['orderId' => $order->id]);
+    $this->get($payUrl)->assertRedirect('https://checkout.xendit.test/inv_ui_test');
 
     $this->post('/orders/track', ['order_id' => $order->id, 'email' => 'browser-buyer@example.test'])
         ->assertRedirect(route('storefront.orders.track'));
@@ -385,9 +388,9 @@ test('customer can switch to COD or cancel pending xendit order directly from ch
         ->assertSee('Batalkan Pesanan');
 
     $cancelUrl1 = URL::temporarySignedRoute('storefront.checkout.result.cancel', now()->addDay(), ['orderId' => $order1->id]);
-    $this->post($cancelUrl1)->assertRedirect(route('storefront.cart.index'));
+    $this->post($cancelUrl1, ['reason' => 'Berubah pikiran'])->assertRedirect(route('storefront.cart.index'));
 
-    expect($order1->fresh()->status)->toBe(OrderStatus::Expired)
+    expect($order1->fresh()->status)->toBe(OrderStatus::Cancelled)
         ->and($this->variant->fresh()->stock_reserved)->toBe(0)
         ->and(session('cart'))->toBe([$this->variant->id => 1]);
 

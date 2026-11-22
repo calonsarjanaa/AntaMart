@@ -377,6 +377,11 @@ class BrowserCheckoutController extends Controller
         return view('storefront.checkout.result', [
             'order' => $order,
             'storeWhatsApp' => $whatsAppService->buildCustomerToOwnerNotification($order),
+            'payUrl' => URL::temporarySignedRoute(
+                'storefront.checkout.result.pay',
+                now()->addDays(3),
+                ['orderId' => $order->id]
+            ),
             'retryUrl' => URL::temporarySignedRoute(
                 'storefront.checkout.result.retry',
                 now()->addDays(3),
@@ -393,6 +398,59 @@ class BrowserCheckoutController extends Controller
                 ['orderId' => $order->id]
             ),
         ]);
+    }
+
+    /**
+     * Guarded payment redirect: locks payment access if order was cancelled/expired after page loaded.
+     */
+    public function payResult(
+        string $orderId,
+        PaymentService $paymentService,
+        OrderExpiryService $orderExpiryService
+    ) {
+        $order = Order::query()->whereKey($orderId)->with('payment')->firstOrFail();
+
+        $resultUrl = URL::temporarySignedRoute(
+            'storefront.checkout.result',
+            now()->addDays(3),
+            ['orderId' => $order->id]
+        );
+
+        if ($order->status === OrderStatus::PendingPayment && $order->payment?->xendit_invoice_id) {
+            if ($paymentService->syncPaymentStatus($order)) {
+                return redirect()->to($resultUrl)
+                    ->with('status', 'Pembayaran pesanan ini sudah dikonfirmasi.');
+            }
+        }
+
+        if ($order->status === OrderStatus::Cancelled) {
+            $reason = $order->rejection_reason ?: $order->latestCancellationRequest?->reason;
+            $msg = 'Pesanan ini telah dibatalkan sehingga pembayaran tidak dapat dilanjutkan.'
+                . ($reason ? " Alasan: {$reason}" : '');
+
+            return redirect()->to($resultUrl)->withErrors(['payment' => $msg]);
+        }
+
+        if ($order->status === OrderStatus::Expired || ($order->status === OrderStatus::PendingPayment && $order->expires_at?->isPast())) {
+            $orderExpiryService->expireOrder($order);
+
+            return redirect()->to($resultUrl)->withErrors([
+                'payment' => 'Batas waktu pembayaran telah lewat. Pesanan telah kedaluwarsa.',
+            ]);
+        }
+
+        if ($order->status !== OrderStatus::PendingPayment || $order->payment?->status !== PaymentStatus::Pending) {
+            return redirect()->to($resultUrl)
+                ->with('status', 'Status pesanan sudah berubah. Periksa informasi terbaru di halaman ini.');
+        }
+
+        if (empty($order->payment?->xendit_payment_url)) {
+            return redirect()->to($resultUrl)->withErrors([
+                'payment' => 'Tautan pembayaran belum tersedia. Silakan muat ulang atau coba buat tautan lagi.',
+            ]);
+        }
+
+        return redirect()->away($order->payment->xendit_payment_url);
     }
 
     public function switchResultToCod(
@@ -461,10 +519,16 @@ class BrowserCheckoutController extends Controller
     }
 
     public function cancelResultPending(
+        Request $request,
         string $orderId,
         PaymentService $paymentService,
         InventoryService $inventoryService
     ) {
+        $data = $request->validate([
+            'reason' => ['nullable', 'string', 'max:2000'],
+        ]);
+        $reason = trim((string) ($data['reason'] ?? '')) ?: 'Dibatalkan oleh pembeli.';
+
         $order = Order::query()->whereKey($orderId)->with(['items', 'payment'])->firstOrFail();
 
         if ($order->status === OrderStatus::PendingPayment && $order->payment?->xendit_invoice_id) {
@@ -481,34 +545,46 @@ class BrowserCheckoutController extends Controller
             return redirect()->back()->with('status', 'Status pesanan sudah berubah dan tidak dapat dibatalkan dari halaman ini.');
         }
 
-        DB::transaction(function () use ($order, $inventoryService): void {
+        $invoiceToExpire = null;
+
+        DB::transaction(function () use ($order, $inventoryService, $reason, &$invoiceToExpire): void {
             $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
             if (!in_array($lockedOrder->status, [OrderStatus::AwaitingConfirmation, OrderStatus::PendingPayment], true)) {
                 return;
             }
 
-            $wasAwaitingConfirmation = $lockedOrder->status === OrderStatus::AwaitingConfirmation;
-            $lockedOrder->transitionTo($wasAwaitingConfirmation ? OrderStatus::Cancelled : OrderStatus::Expired);
-
             $payment = $lockedOrder->payment()->lockForUpdate()->first();
+            $invoiceToExpire = $payment?->xendit_invoice_id;
+
+            $lockedOrder->transitionTo(OrderStatus::Cancelled);
+
             if ($payment && $payment->status === PaymentStatus::Pending) {
                 $payment->status = PaymentStatus::Expired;
                 $payment->save();
             }
 
             $inventoryService->releaseReservations($lockedOrder);
-            if (!$wasAwaitingConfirmation) {
-                PaymentExpired::dispatch($lockedOrder);
-            }
+
+            $lockedOrder->cancellationRequests()->create([
+                'requested_by' => $lockedOrder->customer_id,
+                'reason'       => $reason,
+                'status'       => \App\Enums\CancellationStatus::Approved,
+                'decided_at'   => now(),
+            ]);
 
             AuditEvent::dispatch(
                 'order.cancelled_by_customer',
                 $lockedOrder->id,
                 $lockedOrder->customer_id,
                 $lockedOrder->customer_id ? 'customer' : 'guest',
-                ['reason' => 'cancelled_from_result_page']
+                ['reason' => $reason, 'source' => 'result_page']
             );
         });
+
+        $gateway = app(\App\Adapters\Payment\PaymentGatewayInterface::class);
+        if ($invoiceToExpire && method_exists($gateway, 'expireInvoice')) {
+            $gateway->expireInvoice($invoiceToExpire);
+        }
 
         $cart = session('cart', []);
         foreach ($order->items as $item) {

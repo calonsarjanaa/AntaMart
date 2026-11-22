@@ -81,7 +81,7 @@ test('guest can submit one cancellation request using the order email', function
     expect(CancellationRequest::where('order_id', $order->id)->count())->toBe(1);
 });
 
-test('guest with wrong email cannot request cancellation and non-processing orders reject requests', function () {
+test('guest with wrong email cannot request cancellation and completed orders reject requests', function () {
     $order = ($this->makeOrder)('guest-invalid');
 
     $this->postJson("/api/orders/{$order->id}/cancellation-requests", [
@@ -89,7 +89,7 @@ test('guest with wrong email cannot request cancellation and non-processing orde
         'reason'      => 'Please cancel.',
     ])->assertForbidden();
 
-    $order->update(['status' => OrderStatus::Shipped]);
+    $order->update(['status' => OrderStatus::Completed]);
     $this->postJson("/api/orders/{$order->id}/cancellation-requests", [
         'guest_email' => 'guest-cancel@example.com',
         'reason'      => 'Please cancel.',
@@ -210,4 +210,165 @@ test('customer cannot use owner cancellation endpoints and owner can cancel proc
         ->and($order->fresh()->refund->status)->toBe(RefundStatus::ManualRefundPending)
         ->and($pendingRequest->fresh()->status)->toBe(CancellationStatus::Approved)
         ->and(AuditLog::where('order_id', $order->id)->where('event', 'cancellation.approved')->count())->toBe(2);
+});
+
+test('customer can directly cancel awaiting_confirmation and pending_payment orders without owner approval', function () {
+    $order = ($this->makeOrder)('direct-cancel-pending', $this->customer->id);
+    $order->update(['status' => OrderStatus::PendingPayment, 'expires_at' => now()->addHour()]);
+    Payment::create([
+        'order_id' => $order->id,
+        'amount'   => $order->total,
+        'status'   => PaymentStatus::Pending,
+    ]);
+    $this->variant->update(['stock_reserved' => 2]);
+    \App\Models\InventoryReservation::create([
+        'order_id'           => $order->id,
+        'product_variant_id' => $this->variant->id,
+        'quantity'           => 2,
+        'status'             => 'reserved',
+        'reserved_at'        => now(),
+    ]);
+
+    $this->actingAs($this->customer)
+        ->postJson("/api/orders/{$order->id}/cancellation-requests", [
+            'reason' => 'Ingin ganti metode bayar.',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('data.status', 'approved');
+
+    expect($order->fresh()->status)->toBe(OrderStatus::Cancelled)
+        ->and($order->fresh()->payment->status)->toBe(PaymentStatus::Expired)
+        ->and($this->variant->fresh()->stock_reserved)->toBe(0);
+});
+
+test('customer can request cancellation on shipped order up to maximum 3 attempts', function () {
+    $order = ($this->makeOrder)('shipped-max-3', $this->customer->id);
+    $order->update(['status' => OrderStatus::Shipped]);
+    ($this->makePaidPayment)($order);
+
+    for ($attempt = 1; $attempt <= 3; $attempt++) {
+        $reqResponse = $this->actingAs($this->customer, 'sanctum')
+            ->postJson("/api/orders/{$order->id}/cancellation-requests", [
+                'reason' => "Pengajuan batal ke-{$attempt}",
+            ])
+            ->assertCreated();
+
+        $reqId = $reqResponse->json('data.id');
+
+        // Owner rejects each attempt
+        $this->actingAs($this->owner, 'sanctum')
+            ->postJson("/api/admin/orders/{$order->id}/cancellation-requests/{$reqId}/review", [
+                'decision'         => 'reject',
+                'rejection_reason' => "Ditolak ke-{$attempt}",
+            ])
+            ->assertOk();
+    }
+
+    // 4th attempt must be blocked
+    $this->actingAs($this->customer, 'sanctum')
+        ->postJson("/api/orders/{$order->id}/cancellation-requests", [
+            'reason' => 'Pengajuan ke-4 harus ditolak.',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['cancellation_request']);
+
+    expect(CancellationRequest::where('order_id', $order->id)->count())->toBe(3);
+});
+
+test('owner cancelling pending_payment locks payment button and shows alert when customer hits stale pay URL', function () {
+    \Illuminate\Support\Facades\Http::fake([
+        'https://api.xendit.co/v2/invoices/*' => \Illuminate\Support\Facades\Http::response([
+            'id' => 'inv_lock_test',
+            'status' => 'PENDING',
+            'amount' => 80000,
+        ], 200),
+        'https://api.xendit.co/invoices/inv_lock_test/expire!' => \Illuminate\Support\Facades\Http::response([
+            'id' => 'inv_lock_test',
+            'status' => 'EXPIRED',
+        ], 200),
+    ]);
+
+    $order = ($this->makeOrder)('owner-cancel-pending');
+    $order->update(['status' => OrderStatus::PendingPayment, 'expires_at' => now()->addHour()]);
+    Payment::create([
+        'order_id'           => $order->id,
+        'amount'             => $order->total,
+        'status'             => PaymentStatus::Pending,
+        'xendit_invoice_id'  => 'inv_lock_test',
+        'xendit_payment_url' => 'https://checkout.xendit.co/web/inv_lock_test',
+    ]);
+    $this->variant->update(['stock_reserved' => 1]);
+    \App\Models\InventoryReservation::create([
+        'order_id'           => $order->id,
+        'product_variant_id' => $this->variant->id,
+        'quantity'           => 1,
+        'status'             => 'reserved',
+        'reserved_at'        => now(),
+    ]);
+
+    // Customer already had the signed pay URL open before owner cancelled
+    $stalePayUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+        'storefront.checkout.result.pay',
+        now()->addDay(),
+        ['orderId' => $order->id]
+    );
+
+    // Owner cancels pending_payment order with reason
+    $this->actingAs($this->owner)
+        ->postJson("/api/admin/orders/{$order->id}/cancel", [
+            'reason' => 'Stok rusak saat pengecekan ulang.',
+        ])
+        ->assertOk();
+
+    expect($order->fresh()->status)->toBe(OrderStatus::Cancelled)
+        ->and($this->variant->fresh()->stock_reserved)->toBe(0);
+
+    // Customer clicks stale "Bayar Pesanan" button -> blocked with alert, NOT redirected to Xendit!
+    $payAttempt = $this->get($stalePayUrl);
+    $payAttempt->assertRedirect()
+        ->assertSessionHasErrors('payment');
+    expect($payAttempt->headers->get('Location'))->not->toContain('checkout.xendit.co');
+});
+
+test('owner can cancel shipped paid order and cannot ship while pending cancellation request exists', function () {
+    $order = ($this->makeOrder)('ship-blocked-by-cancel', $this->customer->id);
+    ($this->makePaidPayment)($order);
+
+    $req = $order->cancellationRequests()->create([
+        'requested_by' => $this->customer->id,
+        'reason'       => 'Salah alamat',
+        'status'       => CancellationStatus::Pending,
+    ]);
+
+    // Attempting to ship while pending cancellation exists is blocked
+    $this->actingAs($this->owner)
+        ->postJson("/api/admin/orders/{$order->id}/shipment", [
+            'tracking_number' => 'JNE-BLOCKED',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['order']);
+
+    // Owner rejects cancellation -> now shipping succeeds
+    $this->actingAs($this->owner)
+        ->postJson("/api/admin/orders/{$order->id}/cancellation-requests/{$req->id}/review", [
+            'decision'         => 'reject',
+            'rejection_reason' => 'Sudah dikemas',
+        ])
+        ->assertOk();
+
+    $this->actingAs($this->owner)
+        ->postJson("/api/admin/orders/{$order->id}/shipment", [
+            'tracking_number' => 'JNE-OK-001',
+        ])
+        ->assertCreated();
+
+    // Owner can still cancel shipped paid order
+    $this->actingAs($this->owner)
+        ->postJson("/api/admin/orders/{$order->id}/cancel", [
+            'reason' => 'Kurir gagal kirim dan barang diretur.',
+        ])
+        ->assertOk();
+
+    expect($order->fresh()->status)->toBe(OrderStatus::Cancelled)
+        ->and(Refund::where('order_id', $order->id)->first()->status)->toBe(RefundStatus::ManualRefundPending);
 });
