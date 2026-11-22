@@ -16,6 +16,49 @@
 
         <div class="owner-order-grid">
             <div class="owner-order-main">
+                @if ($order->status->value === 'awaiting_confirmation')
+                    <section class="owner-panel" aria-labelledby="owner-order-confirm-title" style="border: 2px solid #2563eb; background: #f8fbff;">
+                        <div class="owner-panel-heading">
+                            <h2 id="owner-order-confirm-title">Konfirmasi Pesanan (Cek Stok Fisik)</h2>
+                            <x-status-badge status="awaiting_confirmation" />
+                        </div>
+                        <p style="margin-bottom: 14px;">
+                            Periksa ketersediaan stok barang di toko offline sebelum menerima pesanan ini.
+                            @if ($order->payment?->payment_method?->value === 'cod')
+                                Jika diterima, pesanan <strong>COD</strong> akan langsung masuk tahap diproses dan stok dikurangi.
+                            @else
+                                Jika diterima, sistem akan membuat tautan pembayaran <strong>QRIS (berlaku 60 menit)</strong> yang bisa langsung dibayar pembeli.
+                            @endif
+                        </p>
+                        <div class="owner-state-grid">
+                            <div class="owner-state-card">
+                                <span>Terima Pesanan</span>
+                                <small>Stok tersedia di toko dan pesanan siap dilanjutkan.</small>
+                                <form method="post" action="{{ route('owner.orders.accept', $order->id) }}" onsubmit="return confirm('Terima pesanan ini?');" style="margin-top: 10px;">
+                                    @csrf
+                                    <button class="button" type="submit" style="width: 100%; background: #16a34a; border-color: #16a34a;">Terima Pesanan</button>
+                                </form>
+                            </div>
+                            <div class="owner-state-card">
+                                <span>Tolak Pesanan</span>
+                                <form method="post" action="{{ route('owner.orders.reject', $order->id) }}" onsubmit="return confirm('Tolak pesanan ini? Cadangan stok akan dilepaskan.');" style="margin-top: 8px;">
+                                    @csrf
+                                    <label class="field-label" for="order-rejection-reason">Alasan penolakan <span class="required-mark" aria-hidden="true">*</span></label>
+                                    <textarea id="order-rejection-reason" name="rejection_reason" rows="2" maxlength="2000" placeholder="Contoh: Stok fisik di toko sedang habis." required>{{ old('rejection_reason') }}</textarea>
+                                    @error('rejection_reason')<p class="field-error">{{ $message }}</p>@enderror
+                                    <button class="button button-secondary" type="submit" style="margin-top: 8px; width: 100%; color: #b91c1c; border-color: #fca5a5;">Tolak Pesanan</button>
+                                </form>
+                            </div>
+                        </div>
+                    </section>
+                @endif
+
+                @if ($order->rejection_reason)
+                    <x-alert tone="error">
+                        <strong>Pesanan Ditolak oleh Toko:</strong> {{ $order->rejection_reason }}
+                    </x-alert>
+                @endif
+
                 <section class="owner-panel" aria-labelledby="owner-order-items-title">
                     <div class="owner-panel-heading"><h2 id="owner-order-items-title">Item pesanan</h2><span>{{ $order->created_at?->timezone(config('app.timezone'))->format('d M Y, H:i') }}</span></div>
                     <div class="owner-table-wrap">
@@ -238,6 +281,24 @@
                     <p>{{ $order->address->phone }}<br>{{ $order->address->address_line1 }}@if ($order->address->address_line2), {{ $order->address->address_line2 }}@endif<br>{{ $order->address->city }}, {{ $order->address->province }} {{ $order->address->postal_code }}<br>{{ $order->address->country }}</p>
                 @else
                     <p class="owner-muted">Alamat tidak tersedia.</p>
+                @endif
+
+                @if (!empty($whatsAppNotification))
+                    <hr>
+                    <h3>Notifikasi WhatsApp</h3>
+                    <p class="owner-muted" style="margin-bottom: 10px;">Template pesan otomatis menyesuaikan status pesanan saat ini.</p>
+                    <a
+                        class="button"
+                        href="{{ $whatsAppNotification['url'] }}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background: #16a34a; border-color: #16a34a; color: #ffffff; text-decoration: none;"
+                    >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/>
+                        </svg>
+                        <span>{{ $whatsAppNotification['label'] }}</span>
+                    </a>
                 @endif
             </aside>
         </div>

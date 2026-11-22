@@ -31,7 +31,7 @@ beforeEach(function () {
     ]);
 });
 
-test('API COD checkout commits inventory without creating a Xendit invoice', function () {
+test('API COD checkout awaits confirmation then commits inventory upon owner acceptance without Xendit invoice', function () {
     Http::fake();
     $response = $this->postJson('/api/checkout', [
         'idempotency_key' => 'cod-api-checkout',
@@ -46,16 +46,23 @@ test('API COD checkout commits inventory without creating a Xendit invoice', fun
     ]);
 
     $response->assertCreated()
-        ->assertJsonPath('data.status', 'processing')
+        ->assertJsonPath('data.status', 'awaiting_confirmation')
         ->assertJsonPath('data.payment_method', 'cod')
         ->assertJsonPath('data.payment_status', 'pending')
         ->assertJsonPath('data.payment_url', null)
         ->assertJsonPath('data.expires_at', null);
 
     $order = Order::findOrFail($response->json('data.order_id'));
-    expect($order->payment->payment_method)->toBe(PaymentMethod::CashOnDelivery)
-        ->and($order->payment->status)->toBe(PaymentStatus::Pending)
-        ->and($order->expires_at)->toBeNull()
+    expect($this->variant->fresh()->stock_physical)->toBe(5)
+        ->and($this->variant->fresh()->stock_reserved)->toBe(2);
+
+    $this->actingAs($this->owner)->postJson('/api/admin/orders/'.$order->id.'/accept')
+        ->assertOk()
+        ->assertJsonPath('data.status', 'processing');
+
+    expect($order->fresh()->payment->payment_method)->toBe(PaymentMethod::CashOnDelivery)
+        ->and($order->fresh()->payment->status)->toBe(PaymentStatus::Pending)
+        ->and($order->fresh()->expires_at)->toBeNull()
         ->and($this->variant->fresh()->stock_physical)->toBe(3)
         ->and($this->variant->fresh()->stock_reserved)->toBe(0)
         ->and(InventoryReservation::where('order_id', $order->id)->value('status'))->toBe('converted')
@@ -84,6 +91,8 @@ test('owner must confirm COD cash collection when confirming delivery', function
         ],
     ])->assertCreated();
     $orderId = $checkout->json('data.order_id');
+
+    $this->actingAs($this->owner)->postJson("/api/admin/orders/{$orderId}/accept")->assertOk();
 
     $this->actingAs($this->owner)->postJson("/api/admin/orders/{$orderId}/shipment", [
         'tracking_number' => 'COD-TRACK-001',
@@ -119,6 +128,9 @@ test('owner browser delivery form requires COD cash confirmation', function () {
     ])->assertCreated();
     $orderId = $checkout->json('data.order_id');
 
+    $this->actingAs($this->owner)->post(route('owner.orders.accept', $orderId))
+        ->assertRedirect(route('owner.orders.show', $orderId));
+
     $this->actingAs($this->owner)->post(route('owner.orders.shipment.store', $orderId), [
         'tracking_number' => 'COD-WEB-001',
     ])->assertRedirect(route('owner.orders.show', $orderId));
@@ -139,7 +151,7 @@ test('owner browser delivery form requires COD cash confirmation', function () {
         ->and(Payment::where('order_id', $orderId)->first()->status)->toBe(PaymentStatus::Paid);
 });
 
-test('browser checkout offers COD and explains payment due on delivery', function () {
+test('browser checkout offers COD and enters awaiting confirmation before processing', function () {
     Http::fake();
     $this->post('/cart/items', ['product_variant_id' => $this->variant->id, 'quantity' => 1]);
     $this->get('/checkout')->assertOk()->assertSee('Bayar di tempat (COD)');
@@ -155,9 +167,18 @@ test('browser checkout offers COD and explains payment due on delivery', functio
     ])->assertRedirect();
 
     $order = Order::where('guest_email', 'cod-browser@example.test')->firstOrFail();
-    expect($order->status)->toBe(OrderStatus::Processing)
+    expect($order->status)->toBe(OrderStatus::AwaitingConfirmation)
         ->and($order->payment->payment_method)->toBe(PaymentMethod::CashOnDelivery);
-    $this->get($response->headers->get('Location'))
+
+    $resultUrl = $response->headers->get('Location');
+    $this->get($resultUrl)
+        ->assertOk()
+        ->assertSee('Menunggu konfirmasi toko');
+
+    $this->actingAs($this->owner)->post(route('owner.orders.accept', $order->id))
+        ->assertRedirect(route('owner.orders.show', $order->id));
+
+    $this->get($resultUrl)
         ->assertOk()
         ->assertSee('Pesanan COD sedang diproses')
         ->assertSee('saat pesanan diterima');

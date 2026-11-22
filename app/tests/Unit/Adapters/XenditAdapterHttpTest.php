@@ -36,7 +36,7 @@ test('createInvoice sends correct payload to Xendit API and returns session deta
             && $request['external_id'] === '01ARZ3NDEKTSV4RRFFQ69G5FAV'
             && $request['amount'] === 250000
             && $request['payer_email'] === 'customer@example.com'
-            && $request['invoice_duration'] === 900 // 15 minutes per FR-PAY-002
+            && $request['invoice_duration'] === 3600 // 60 minutes after store confirmation
             && $request['currency'] === 'IDR'
             && $request['payment_methods'] === ['QRIS'];
     });

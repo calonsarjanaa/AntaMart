@@ -58,7 +58,7 @@ test('guest checkout successfully creates order, snapshots, stock reservation, a
     $response = $this->postJson('/api/checkout', $payload);
 
     $response->assertStatus(201)
-        ->assertJsonPath('data.status', 'pending_payment')
+        ->assertJsonPath('data.status', 'awaiting_confirmation')
         ->assertJsonPath('data.subtotal', '550000.00')
         ->assertJsonPath('data.total', '550000.00');
 
@@ -68,7 +68,7 @@ test('guest checkout successfully creates order, snapshots, stock reservation, a
     expect($order)->not->toBeNull()
         ->and($order->isGuest())->toBeTrue()
         ->and($order->guest_email)->toBe('guest@example.com')
-        ->and($order->status)->toBe(OrderStatus::PendingPayment)
+        ->and($order->status)->toBe(OrderStatus::AwaitingConfirmation)
         ->and($order->items)->toHaveCount(2)
         ->and($order->address->recipient_name)->toBe('Budi Santoso')
         ->and($order->payment->status)->toBe(PaymentStatus::Pending)
