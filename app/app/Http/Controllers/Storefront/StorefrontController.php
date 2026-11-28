@@ -5,12 +5,13 @@ namespace App\Http\Controllers\Storefront;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductCategory;
+use App\Services\AgeVerificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class StorefrontController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, AgeVerificationService $ageVerificationService)
     {
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:100'],
@@ -24,7 +25,15 @@ class StorefrontController extends Controller
 
         if ($selectedCategory && $selectedCategory->isAgeRestricted()) {
             $minAge = $selectedCategory->min_age ?? 21;
-            if (!session("age_verified_{$minAge}")) {
+            $ageStatus = $ageVerificationService->status($request->user('web'), $minAge);
+
+            if ($ageStatus === 'underage') {
+                return redirect()->route('storefront.home')->withErrors([
+                    'birth_date' => "Maaf, usia pada profil akun Anda belum memenuhi syarat minimal {$minAge} tahun untuk mengakses kategori {$selectedCategory->name}.",
+                ]);
+            }
+
+            if ($ageStatus !== 'verified') {
                 return redirect()->route('storefront.age-verification.show', [
                     'category' => $selectedCategory->slug,
                 ]);
@@ -81,7 +90,7 @@ class StorefrontController extends Controller
         ]);
     }
 
-    public function show(string $slug)
+    public function show(Request $request, string $slug, AgeVerificationService $ageVerificationService)
     {
         $product = Product::query()
             ->where('slug', $slug)
@@ -95,7 +104,15 @@ class StorefrontController extends Controller
 
         if ($product->isAgeRestricted()) {
             $minAge = $product->category->min_age ?? 21;
-            if (!session("age_verified_{$minAge}")) {
+            $ageStatus = $ageVerificationService->status($request->user('web'), $minAge);
+
+            if ($ageStatus === 'underage') {
+                return redirect()->route('storefront.home')->withErrors([
+                    'birth_date' => "Maaf, usia pada profil akun Anda belum memenuhi syarat minimal {$minAge} tahun untuk mengakses produk ini.",
+                ]);
+            }
+
+            if ($ageStatus !== 'verified') {
                 return redirect()->route('storefront.age-verification.show', [
                     'category' => $product->category->slug,
                     'return_url' => route('storefront.products.show', $product->slug),

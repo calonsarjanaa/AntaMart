@@ -8,6 +8,7 @@ use App\Http\Controllers\Storefront\CancellationRequestController;
 use App\Http\Controllers\Storefront\CheckoutController;
 use App\Http\Controllers\Storefront\GuestOrderTrackingController;
 use App\Http\Controllers\Storefront\ProductCatalogController;
+use App\Http\Controllers\Storefront\RegionController;
 use App\Http\Controllers\Storefront\RetryPaymentSessionController;
 use App\Http\Controllers\Webhook\XenditController;
 use Illuminate\Http\Request;
@@ -25,6 +26,9 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 // Storefront Checkout (Guest & Auth)
 Route::get('/products', ProductCatalogController::class);
+Route::get('/regions/provinces', [RegionController::class, 'provinces']);
+Route::get('/regions/regencies/{provinceId}', [RegionController::class, 'regencies']);
+Route::get('/regions/districts/{regencyId}', [RegionController::class, 'districts']);
 Route::post('/checkout', CheckoutController::class);
 
 // Retry / Re-create payment session

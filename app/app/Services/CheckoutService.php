@@ -123,22 +123,30 @@ class CheckoutService
         }
 
         if ($maxRequiredAge > 0) {
-            $sessionVerified = app()->bound('session') && session("age_verified_{$maxRequiredAge}") === true;
-            $birthDateRaw = $data['birth_date'] ?? null;
-            $birthDateVerified = false;
-
-            if (!empty($birthDateRaw)) {
-                try {
-                    $birthDateVerified = Carbon::parse((string) $birthDateRaw)->age >= $maxRequiredAge;
-                } catch (\Throwable) {
-                    $birthDateVerified = false;
+            if ($user && $user->hasBirthDate()) {
+                if (!$user->meetsAgeRequirement($maxRequiredAge)) {
+                    throw ValidationException::withMessages([
+                        'birth_date' => "Usia pada profil akun Anda belum memenuhi syarat minimal {$maxRequiredAge} tahun untuk membeli produk ini.",
+                    ]);
                 }
-            }
+            } else {
+                $sessionVerified = app()->bound('session') && session("age_verified_{$maxRequiredAge}") === true;
+                $birthDateRaw = $data['birth_date'] ?? null;
+                $birthDateVerified = false;
 
-            if (!$sessionVerified && !$birthDateVerified) {
-                throw ValidationException::withMessages([
-                    'birth_date' => "Pesanan mengandung produk khusus usia {$maxRequiredAge}+ tahun. Verifikasi tanggal lahir diperlukan.",
-                ]);
+                if (!empty($birthDateRaw)) {
+                    try {
+                        $birthDateVerified = Carbon::parse((string) $birthDateRaw)->age >= $maxRequiredAge;
+                    } catch (\Throwable) {
+                        $birthDateVerified = false;
+                    }
+                }
+
+                if (!$sessionVerified && !$birthDateVerified) {
+                    throw ValidationException::withMessages([
+                        'birth_date' => "Pesanan mengandung produk khusus usia {$maxRequiredAge}+ tahun. Verifikasi tanggal lahir diperlukan.",
+                    ]);
+                }
             }
         }
 
@@ -214,8 +222,10 @@ class CheckoutService
                 'address_line1'  => $addr['address_line1'],
                 'address_line2'  => $addr['address_line2'] ?? null,
                 'city'           => $addr['city'],
+                'district'       => $addr['district'] ?? null,
+                'village'        => $addr['village'] ?? null,
                 'province'       => $addr['province'],
-                'postal_code'    => $addr['postal_code'],
+                'postal_code'    => $addr['postal_code'] ?? '',
                 'country'        => $addr['country'] ?? 'ID',
             ]);
 

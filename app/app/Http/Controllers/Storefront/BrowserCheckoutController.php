@@ -11,6 +11,7 @@ use App\Events\PaymentExpired;
 use App\Exceptions\InsufficientStockException;
 use App\Models\Order;
 use App\Models\ProductVariant;
+use App\Services\AgeVerificationService;
 use App\Services\CheckoutService;
 use App\Services\InventoryService;
 use App\Services\OrderExpiryService;
@@ -26,7 +27,7 @@ use Illuminate\Validation\ValidationException;
 
 class BrowserCheckoutController extends Controller
 {
-    public function create(Request $request)
+    public function create(Request $request, AgeVerificationService $ageVerificationService)
     {
         $customer = $request->user('web');
         abort_if($customer && !$customer->isCustomer(), 403);
@@ -53,8 +54,15 @@ class BrowserCheckoutController extends Controller
             if ($variant->product->isAgeRestricted()) {
                 $category = $variant->product->category;
                 $minAge = $category->min_age;
+                $ageStatus = $ageVerificationService->status($customer, $minAge);
 
-                if (!session("age_verified_{$minAge}")) {
+                if ($ageStatus === 'underage') {
+                    return redirect()->route('storefront.cart.index')->withErrors([
+                        'birth_date' => "Maaf, usia pada profil akun Anda belum memenuhi syarat minimal {$minAge} tahun untuk membeli produk kategori {$category->name}.",
+                    ]);
+                }
+
+                if ($ageStatus !== 'verified') {
                     return redirect()->route('storefront.age-verification.show', [
                         'category' => $category->slug,
                         'return_url' => route('storefront.checkout.create'),
@@ -99,11 +107,13 @@ class BrowserCheckoutController extends Controller
                 $lastCheckout = [
                     'recipient_name' => $lastOrder->address->recipient_name,
                     'phone' => $lastOrder->address->phone,
+                    'province' => $lastOrder->address->province,
+                    'city' => $lastOrder->address->city,
+                    'district' => $lastOrder->address->district ?? '',
+                    'village' => $lastOrder->address->village ?? '',
                     'address_line1' => $lastOrder->address->address_line1,
                     'address_line2' => $lastOrder->address->address_line2 ?? '',
-                    'city' => $lastOrder->address->city,
-                    'province' => $lastOrder->address->province,
-                    'postal_code' => $lastOrder->address->postal_code,
+                    'postal_code' => $lastOrder->address->postal_code ?? '',
                 ];
             }
         } elseif (session()->has('last_checkout_data')) {
@@ -118,11 +128,13 @@ class BrowserCheckoutController extends Controller
                         'guest_phone' => $lastOrder->guest_phone,
                         'recipient_name' => $lastOrder->address->recipient_name,
                         'phone' => $lastOrder->address->phone,
+                        'province' => $lastOrder->address->province,
+                        'city' => $lastOrder->address->city,
+                        'district' => $lastOrder->address->district ?? '',
+                        'village' => $lastOrder->address->village ?? '',
                         'address_line1' => $lastOrder->address->address_line1,
                         'address_line2' => $lastOrder->address->address_line2 ?? '',
-                        'city' => $lastOrder->address->city,
-                        'province' => $lastOrder->address->province,
-                        'postal_code' => $lastOrder->address->postal_code,
+                        'postal_code' => $lastOrder->address->postal_code ?? '',
                     ];
                 }
             }
@@ -132,6 +144,7 @@ class BrowserCheckoutController extends Controller
             'items' => $items,
             'subtotal' => $items->sum('line_total'),
             'customer' => $customer,
+            'profileAddress' => $customer?->profileAddress(),
             'lastCheckout' => $lastCheckout,
         ]);
     }
@@ -156,11 +169,13 @@ class BrowserCheckoutController extends Controller
             'guest_phone' => [$isGuest ? 'required' : 'nullable', 'string', 'max:30'],
             'shipping_address.recipient_name' => ['required', 'string', 'max:255'],
             'shipping_address.phone' => ['required', 'string', 'max:30'],
+            'shipping_address.province' => ['required', 'string', 'max:100'],
+            'shipping_address.city' => ['required', 'string', 'max:100'],
+            'shipping_address.district' => ['nullable', 'string', 'max:100'],
+            'shipping_address.village' => ['nullable', 'string', 'max:150'],
             'shipping_address.address_line1' => ['required', 'string', 'max:255'],
             'shipping_address.address_line2' => ['nullable', 'string', 'max:255'],
-            'shipping_address.city' => ['required', 'string', 'max:100'],
-            'shipping_address.province' => ['required', 'string', 'max:100'],
-            'shipping_address.postal_code' => ['required', 'string', 'max:20'],
+            'shipping_address.postal_code' => ['nullable', 'string', 'max:20'],
             'payment_method' => ['required', 'in:xendit,cod'],
         ])->validate();
 
@@ -180,11 +195,13 @@ class BrowserCheckoutController extends Controller
                 'guest_phone' => $validated['guest_phone'] ?? null,
                 'recipient_name' => $validated['shipping_address']['recipient_name'],
                 'phone' => $validated['shipping_address']['phone'],
+                'province' => $validated['shipping_address']['province'],
+                'city' => $validated['shipping_address']['city'],
+                'district' => $validated['shipping_address']['district'] ?? '',
+                'village' => $validated['shipping_address']['village'] ?? '',
                 'address_line1' => $validated['shipping_address']['address_line1'],
                 'address_line2' => $validated['shipping_address']['address_line2'] ?? '',
-                'city' => $validated['shipping_address']['city'],
-                'province' => $validated['shipping_address']['province'],
-                'postal_code' => $validated['shipping_address']['postal_code'],
+                'postal_code' => $validated['shipping_address']['postal_code'] ?? '',
             ],
         ]);
 
@@ -193,7 +210,7 @@ class BrowserCheckoutController extends Controller
                 ...$validated,
                 'idempotency_key' => $idempotencyKey,
                 'payment_method' => $validated['payment_method'],
-                'birth_date' => session('age_verified_birth_date'),
+                'birth_date' => $customer?->birth_date?->format('Y-m-d') ?? session('age_verified_birth_date'),
                 'items' => $items,
                 'shipping_address' => [
                     ...$validated['shipping_address'],

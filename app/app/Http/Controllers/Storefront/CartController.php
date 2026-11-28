@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Storefront;
 
 use App\Http\Controllers\Controller;
 use App\Models\ProductVariant;
+use App\Services\AgeVerificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -64,7 +65,7 @@ class CartController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, AgeVerificationService $ageVerificationService)
     {
         $data = $request->validate([
             'product_variant_id' => ['required', 'integer', 'exists:product_variants,id'],
@@ -87,8 +88,15 @@ class CartController extends Controller
         if ($variant->product->isAgeRestricted()) {
             $category = $variant->product->category;
             $minAge = $category->min_age;
+            $ageStatus = $ageVerificationService->status($request->user('web'), $minAge);
 
-            if (!session("age_verified_{$minAge}")) {
+            if ($ageStatus === 'underage') {
+                return redirect()->route('storefront.home')->withErrors([
+                    'birth_date' => "Maaf, usia pada profil akun Anda belum memenuhi syarat minimal {$minAge} tahun untuk membeli produk ini.",
+                ]);
+            }
+
+            if ($ageStatus !== 'verified') {
                 return redirect()->route('storefront.age-verification.show', [
                     'category' => $category->slug,
                     'return_url' => route('storefront.products.show', $variant->product->slug),

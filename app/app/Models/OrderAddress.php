@@ -17,6 +17,8 @@ class OrderAddress extends Model
         'address_line1',
         'address_line2',
         'city',
+        'district',
+        'village',
         'province',
         'postal_code',
         'country',
