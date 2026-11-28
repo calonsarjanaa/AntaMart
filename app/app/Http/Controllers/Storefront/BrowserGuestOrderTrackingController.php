@@ -72,7 +72,7 @@ class BrowserGuestOrderTrackingController extends Controller
         $request->session()->forget('tracking.order_id');
 
         $data = $request->validate([
-            'order_id' => ['required', 'string', 'size:26'],
+            'order_id' => ['required', 'string', 'min:10', 'max:26'],
             'email' => ['required', 'email', 'max:255'],
         ]);
 

@@ -4,19 +4,54 @@ namespace App\Models;
 
 use App\Enums\OrderStatus;
 use App\Exceptions\InvalidOrderStateException;
-use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\DB;
 
 class Order extends Model
 {
-    use HasFactory, HasUlids;
+    use HasFactory;
 
     protected $keyType = 'string';
     public $incrementing = false;
+
+    protected static function booted(): void
+    {
+        static::creating(function (Order $order): void {
+            if (empty($order->id)) {
+                $order->id = static::generateOrderCode();
+            }
+        });
+    }
+
+    /**
+     * Generate sequential daily order code in format: AM.{YYYY}{MM}{DD}{NNNN}
+     * Example: AM.202611280001 (resets to 0001 each day).
+     */
+    public static function generateOrderCode(): string
+    {
+        $date = now()->timezone(config('app.timezone'))->format('Ymd');
+        $prefix = "AM.{$date}";
+
+        $lastId = DB::table('orders')
+            ->where('id', 'like', $prefix . '%')
+            ->orderByDesc('id')
+            ->lockForUpdate()
+            ->value('id');
+
+        $nextNumber = 1;
+        if (is_string($lastId) && str_starts_with($lastId, $prefix)) {
+            $suffix = substr($lastId, strlen($prefix));
+            if (ctype_digit($suffix)) {
+                $nextNumber = ((int) $suffix) + 1;
+            }
+        }
+
+        return $prefix . str_pad((string) $nextNumber, 4, '0', STR_PAD_LEFT);
+    }
 
     protected $fillable = [
         'id',

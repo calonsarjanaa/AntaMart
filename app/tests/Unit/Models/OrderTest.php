@@ -11,22 +11,55 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-test('order generates ULID primary key automatically', function () {
-    $order = Order::create([
-        'customer_id'     => null,
-        'guest_email'     => 'guest@example.com',
-        'guest_phone'     => '08123456789',
-        'status'          => OrderStatus::PendingPayment,
-        'subtotal'        => 100000.00,
-        'shipping_cost'   => 15000.00,
-        'total'           => 115000.00,
-        'idempotency_key' => 'idemp-test-1',
-    ]);
+test('order generates sequential daily AM order code automatically and resets each day', function () {
+    \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::create(2026, 11, 28, 10, 0, 0, config('app.timezone')));
 
-    expect($order->id)->toBeString()
-        ->and(strlen($order->id))->toBe(26)
-        ->and($order->isGuest())->toBeTrue()
-        ->and($order->status)->toBe(OrderStatus::PendingPayment);
+    try {
+        $order1 = Order::create([
+            'customer_id'     => null,
+            'guest_email'     => 'guest@example.com',
+            'guest_phone'     => '08123456789',
+            'status'          => OrderStatus::PendingPayment,
+            'subtotal'        => 100000.00,
+            'shipping_cost'   => 15000.00,
+            'total'           => 115000.00,
+            'idempotency_key' => 'idemp-test-1',
+        ]);
+
+        $order2 = Order::create([
+            'customer_id'     => null,
+            'guest_email'     => 'guest2@example.com',
+            'guest_phone'     => '08123456789',
+            'status'          => OrderStatus::PendingPayment,
+            'subtotal'        => 50000.00,
+            'shipping_cost'   => 0.00,
+            'total'           => 50000.00,
+            'idempotency_key' => 'idemp-test-1b',
+        ]);
+
+        expect($order1->id)->toBe('AM.202611280001')
+            ->and($order2->id)->toBe('AM.202611280002')
+            ->and($order1->isGuest())->toBeTrue()
+            ->and($order1->status)->toBe(OrderStatus::PendingPayment);
+
+        // Next day resets sequence to 0001
+        \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::create(2026, 11, 29, 8, 0, 0, config('app.timezone')));
+
+        $orderNextDay = Order::create([
+            'customer_id'     => null,
+            'guest_email'     => 'guest3@example.com',
+            'guest_phone'     => '08123456789',
+            'status'          => OrderStatus::PendingPayment,
+            'subtotal'        => 50000.00,
+            'shipping_cost'   => 0.00,
+            'total'           => 50000.00,
+            'idempotency_key' => 'idemp-test-1c',
+        ]);
+
+        expect($orderNextDay->id)->toBe('AM.202611290001');
+    } finally {
+        \Illuminate\Support\Carbon::setTestNow();
+    }
 });
 
 test('order transitionTo succeeds for valid state changes', function () {
