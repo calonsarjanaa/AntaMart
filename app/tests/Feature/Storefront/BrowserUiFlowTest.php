@@ -67,7 +67,7 @@ test('guest can browse, add to cart, check out, hand off payment, and track the 
     $this->get('/products/ui-test-mug')
         ->assertOk()
         ->assertSee('<fieldset class="variant-options" aria-labelledby="variant-list-title">', false)
-        ->assertSee('Pilihan produk');
+        ->assertSee('Pilih satuan');
 
     $this->post('/cart/items', ['product_variant_id' => $this->variant->id, 'quantity' => 1])
         ->assertRedirect(route('storefront.cart.index'));

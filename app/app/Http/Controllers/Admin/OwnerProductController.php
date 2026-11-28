@@ -48,20 +48,51 @@ class OwnerProductController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $data = $request->validate([
+        $usesMultipleVariants = is_array($request->input('variants'));
+
+        $rules = [
             'name' => ['required', 'string', 'max:255'],
             'category_id' => ['required', 'integer', 'exists:product_categories,id'],
             'description' => ['nullable', 'string', 'max:10000'],
             'image' => ['nullable', 'image', 'max:5120'],
-            'variant_name' => ['required', 'string', 'max:255'],
-            'sku' => ['required', 'string', 'max:100', 'unique:product_variants,sku'],
-            'price' => ['required', 'numeric', 'min:0', 'max:9999999999999.99'],
-            'stock_physical' => ['required', 'integer', 'min:0', 'max:4294967295'],
-            'is_active' => ['required', 'boolean'],
-        ]);
+        ];
+
+        if ($usesMultipleVariants) {
+            $rules = array_merge($rules, [
+                'variants' => ['required', 'array', 'min:1'],
+                'variants.*.name' => ['required', 'string', 'max:255'],
+                'variants.*.sku' => ['required', 'string', 'max:100', 'distinct', 'unique:product_variants,sku'],
+                'variants.*.price' => ['required', 'numeric', 'min:0', 'max:9999999999999.99'],
+                'variants.*.weight_grams' => ['nullable', 'integer', 'min:1', 'max:1000000'],
+                'variants.*.stock_physical' => ['required', 'integer', 'min:0', 'max:4294967295'],
+                'variants.*.is_active' => ['required', 'boolean'],
+            ]);
+        } else {
+            $rules = array_merge($rules, [
+                'variant_name' => ['required', 'string', 'max:255'],
+                'sku' => ['required', 'string', 'max:100', 'unique:product_variants,sku'],
+                'price' => ['required', 'numeric', 'min:0', 'max:9999999999999.99'],
+                'weight_grams' => ['nullable', 'integer', 'min:1', 'max:1000000'],
+                'stock_physical' => ['required', 'integer', 'min:0', 'max:4294967295'],
+                'is_active' => ['required', 'boolean'],
+            ]);
+        }
+
+        $data = $request->validate($rules);
+
+        $variantsToCreate = $usesMultipleVariants
+            ? $data['variants']
+            : [[
+                'name' => $data['variant_name'],
+                'sku' => $data['sku'],
+                'price' => $data['price'],
+                'weight_grams' => $data['weight_grams'] ?? 500,
+                'stock_physical' => $data['stock_physical'],
+                'is_active' => $data['is_active'],
+            ]];
 
         $imagePath = $request->file('image')?->store('products', 'public');
-        $product = DB::transaction(function () use ($data, $imagePath): Product {
+        $product = DB::transaction(function () use ($data, $imagePath, $variantsToCreate): Product {
             $baseSlug = Str::slug($data['name']) ?: 'product';
             $slug = $baseSlug;
             for ($suffix = 2; Product::where('slug', $slug)->exists(); $suffix++) {
@@ -76,14 +107,18 @@ class OwnerProductController extends Controller
                 'image_path' => $imagePath,
                 'is_active' => true,
             ]);
-            $product->variants()->create([
-                'sku' => $data['sku'],
-                'name' => $data['variant_name'],
-                'price' => $data['price'],
-                'stock_physical' => $data['stock_physical'],
-                'stock_reserved' => 0,
-                'is_active' => (bool) $data['is_active'],
-            ]);
+
+            foreach ($variantsToCreate as $variantData) {
+                $product->variants()->create([
+                    'sku' => $variantData['sku'],
+                    'name' => $variantData['name'],
+                    'price' => $variantData['price'],
+                    'weight_grams' => (int) ($variantData['weight_grams'] ?? 500),
+                    'stock_physical' => $variantData['stock_physical'],
+                    'stock_reserved' => 0,
+                    'is_active' => (bool) $variantData['is_active'],
+                ]);
+            }
 
             return $product;
         });
@@ -135,16 +170,18 @@ class OwnerProductController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'sku' => ['required', 'string', 'max:100', 'unique:product_variants,sku'],
             'price' => ['required', 'numeric', 'min:0', 'max:9999999999999.99'],
+            'weight_grams' => ['nullable', 'integer', 'min:1', 'max:1000000'],
             'stock_physical' => ['required', 'integer', 'min:0', 'max:4294967295'],
             'is_active' => ['required', 'boolean'],
         ]);
         $product->variants()->create([
             ...$data,
+            'weight_grams' => (int) ($data['weight_grams'] ?? 500),
             'stock_reserved' => 0,
             'is_active' => (bool) $data['is_active'],
         ]);
 
-        return back()->with('status', 'Varian berhasil ditambahkan.');
+        return back()->with('status', 'Satuan / varian berhasil ditambahkan.');
     }
 
     public function updateVariant(Request $request, Product $product, ProductVariant $variant, AuditService $audit): RedirectResponse
@@ -155,6 +192,7 @@ class OwnerProductController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'sku' => ['required', 'string', 'max:100', Rule::unique('product_variants', 'sku')->ignore($variant->id)],
             'price' => ['required', 'numeric', 'min:0', 'max:9999999999999.99'],
+            'weight_grams' => ['nullable', 'integer', 'min:1', 'max:1000000'],
             'stock_physical' => ['required', 'integer', 'min:0', 'max:4294967295'],
             'is_active' => ['required', 'boolean'],
         ]);
@@ -172,6 +210,7 @@ class OwnerProductController extends Controller
                 'name' => $data['name'],
                 'sku' => $data['sku'],
                 'price' => $data['price'],
+                'weight_grams' => (int) ($data['weight_grams'] ?? 500),
                 'stock_physical' => $data['stock_physical'],
                 'is_active' => (bool) $data['is_active'],
             ]);

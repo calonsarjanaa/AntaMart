@@ -3,6 +3,7 @@
     'required' => false,
     'values' => [],
     'includeRecipient' => true,
+    'showMap' => false,
 ])
 
 @php
@@ -10,9 +11,17 @@
     $fieldId = fn (string $key): string => $prefix !== '' ? "{$prefix}_{$key}" : $key;
     $errorKey = fn (string $key): string => $prefix !== '' ? "{$prefix}.{$key}" : $key;
     $oldVal = fn (string $key): string => (string) old($errorKey($key), $values[$key] ?? '');
+    $storeLat = (float) config('services.store.latitude', -1.606188);
+    $storeLng = (float) config('services.store.longitude', 103.521922);
 @endphp
 
-<div class="indonesia-address-group checkout-fields" data-indonesia-address data-prefix="{{ $prefix }}">
+<div
+    class="indonesia-address-group checkout-fields"
+    data-indonesia-address
+    data-prefix="{{ $prefix }}"
+    data-store-lat="{{ $storeLat }}"
+    data-store-lng="{{ $storeLng }}"
+>
     @if ($includeRecipient)
         <div class="form-field">
             <label class="field-label" for="{{ $fieldId('recipient_name') }}">
@@ -140,12 +149,55 @@
         >{{ $oldVal('address_line1') }}</textarea>
         @error($errorKey('address_line1'))<p class="field-error">{{ $message }}</p>@enderror
     </div>
+
+    <input type="hidden" id="{{ $fieldId('latitude') }}" name="{{ $fieldName('latitude') }}" value="{{ $oldVal('latitude') }}" data-coord-role="latitude">
+    <input type="hidden" id="{{ $fieldId('longitude') }}" name="{{ $fieldName('longitude') }}" value="{{ $oldVal('longitude') }}" data-coord-role="longitude">
+
+    @if ($showMap)
+        <div class="form-field" style="grid-column: 1 / -1;">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px;">
+                <label class="field-label" style="margin: 0;">Titik Lokasi Pengiriman (untuk cek jarak Kurir AntaMart)</label>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <button type="button" class="button button-secondary" data-map-action="geolocate" style="min-height: 32px; padding: 4px 10px; font-size: 0.82rem;">
+                        Gunakan Lokasi Saya (GPS)
+                    </button>
+                    <button type="button" class="button button-secondary" data-map-action="center-region" style="min-height: 32px; padding: 4px 10px; font-size: 0.82rem;">
+                        Arahkan ke Kecamatan
+                    </button>
+                </div>
+            </div>
+            <div data-address-map style="height: 230px; width: 100%; border-radius: 10px; border: 1px solid #d1d5db; z-index: 1;"></div>
+            <p data-map-distance-hint style="margin: 6px 0 0; font-size: 0.86rem; color: #4b5563;">
+                Klik peta atau geser pin biru ke lokasi rumah Anda untuk menghitung jarak dari toko AntaMart (Mendalo Darat, Jambi).
+            </p>
+        </div>
+    @endif
 </div>
 
 @once
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script>
         (function () {
             const cache = { provinces: null, regencies: {}, districts: {} };
+            const mapRegistry = new WeakMap();
+
+            function haversineKm(lat1, lng1, lat2, lng2) {
+                const R = 6371;
+                const dLat = (lat2 - lat1) * Math.PI / 180;
+                const dLng = (lng2 - lng1) * Math.PI / 180;
+                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
+                    * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+                return Math.round((R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))) * 100) / 100;
+            }
+
+            function emitAddressChanged(group) {
+                group.dispatchEvent(new CustomEvent('antamart:address-changed', {
+                    bubbles: true,
+                    detail: window.AntaMartAddress.snapshot(group),
+                }));
+            }
 
             async function fetchJson(url) {
                 try {
@@ -265,13 +317,170 @@
 
                     const districts = await getDistricts(cityId);
                     populateSelect(distSelect, districts, '-- Pilih Kecamatan --', '');
+                    emitAddressChanged(group);
                 });
+
+                distSelect.addEventListener('change', async function () {
+                    const mapState = mapRegistry.get(group);
+                    if (mapState && !mapState.userPinned) {
+                        await geocodeAndPin(group, false);
+                    }
+                    emitAddressChanged(group);
+                });
+
+                initMap(group);
 
                 hydrateGroup(group, {
                     province: provSelect.dataset.initial || '',
                     city: citySelect.dataset.initial || '',
                     district: distSelect.dataset.initial || '',
+                }).then(function () {
+                    emitAddressChanged(group);
                 });
+            }
+
+            function updateDistanceHint(group, lat, lng) {
+                const hintEl = group.querySelector('[data-map-distance-hint]');
+                if (!hintEl) return;
+                const storeLat = parseFloat(group.dataset.storeLat || '-1.606188');
+                const storeLng = parseFloat(group.dataset.storeLng || '103.521922');
+                if (isNaN(lat) || isNaN(lng)) {
+                    hintEl.textContent = 'Klik peta atau geser pin biru ke lokasi rumah Anda untuk menghitung jarak dari toko AntaMart (Mendalo Darat, Jambi).';
+                    return;
+                }
+                const km = haversineKm(storeLat, storeLng, lat, lng);
+                if (km <= 5) {
+                    hintEl.innerHTML = 'Jarak dari toko AntaMart: <strong>' + km.toFixed(1) + ' km</strong> — masuk jangkauan <strong>Kurir AntaMart (Rp 5.000)</strong> &amp; ekspedisi.';
+                } else if (km <= 10) {
+                    hintEl.innerHTML = 'Jarak dari toko AntaMart: <strong>' + km.toFixed(1) + ' km</strong> — masuk jangkauan <strong>Kurir AntaMart (Rp 10.000)</strong> &amp; ekspedisi.';
+                } else if (km <= 20) {
+                    hintEl.innerHTML = 'Jarak dari toko AntaMart: <strong>' + km.toFixed(1) + ' km</strong> — masuk jangkauan <strong>Kurir AntaMart (Rp 20.000)</strong> &amp; ekspedisi.';
+                } else {
+                    hintEl.innerHTML = 'Jarak dari toko AntaMart: <strong>' + km.toFixed(1) + ' km</strong> — di luar jangkauan Kurir AntaMart (&gt; 20 km). Pengiriman menggunakan ekspedisi.';
+                }
+            }
+
+            function setPin(group, lat, lng, isManual) {
+                const latInput = group.querySelector('[data-coord-role="latitude"]');
+                const lngInput = group.querySelector('[data-coord-role="longitude"]');
+                const mapState = mapRegistry.get(group);
+
+                if (latInput) latInput.value = isNaN(lat) ? '' : lat.toFixed(7);
+                if (lngInput) lngInput.value = isNaN(lng) ? '' : lng.toFixed(7);
+
+                if (mapState && !isNaN(lat) && !isNaN(lng)) {
+                    if (isManual) mapState.userPinned = true;
+                    if (!mapState.marker) {
+                        mapState.marker = L.marker([lat, lng], { draggable: true }).addTo(mapState.map);
+                        mapState.marker.bindPopup('Lokasi pengiriman Anda');
+                        mapState.marker.on('dragend', function (e) {
+                            const pos = e.target.getLatLng();
+                            setPin(group, pos.lat, pos.lng, true);
+                            emitAddressChanged(group);
+                        });
+                    } else {
+                        mapState.marker.setLatLng([lat, lng]);
+                    }
+                    mapState.map.setView([lat, lng], Math.max(mapState.map.getZoom(), 13));
+                }
+
+                updateDistanceHint(group, lat, lng);
+            }
+
+            async function geocodeAndPin(group, forceZoom) {
+                const snap = window.AntaMartAddress.snapshot(group);
+                const queryParts = [snap.district, snap.city, snap.province].filter(Boolean);
+                if (queryParts.length === 0) return;
+
+                try {
+                    const res = await fetch('/api/shipping/geocode?q=' + encodeURIComponent(queryParts.join(', ')), {
+                        headers: { Accept: 'application/json' },
+                    });
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    if (data && data.found && data.latitude && data.longitude) {
+                        setPin(group, parseFloat(data.latitude), parseFloat(data.longitude), false);
+                        if (forceZoom) emitAddressChanged(group);
+                    }
+                } catch (e) {}
+            }
+
+            function initMap(group) {
+                const mapContainer = group.querySelector('[data-address-map]');
+                if (!mapContainer || typeof L === 'undefined') return;
+
+                const storeLat = parseFloat(group.dataset.storeLat || '-1.606188');
+                const storeLng = parseFloat(group.dataset.storeLng || '103.521922');
+                const latInput = group.querySelector('[data-coord-role="latitude"]');
+                const lngInput = group.querySelector('[data-coord-role="longitude"]');
+
+                const initialLat = latInput && latInput.value ? parseFloat(latInput.value) : NaN;
+                const initialLng = lngInput && lngInput.value ? parseFloat(lngInput.value) : NaN;
+                const hasInitial = !isNaN(initialLat) && !isNaN(initialLng);
+
+                const map = L.map(mapContainer).setView(
+                    hasInitial ? [initialLat, initialLng] : [storeLat, storeLng],
+                    hasInitial ? 14 : 12
+                );
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; OpenStreetMap',
+                }).addTo(map);
+
+                // Store location marker (AntaMart)
+                L.circleMarker([storeLat, storeLng], {
+                    radius: 8,
+                    color: '#dc2626',
+                    fillColor: '#ef4444',
+                    fillOpacity: 0.9,
+                }).addTo(map).bindPopup('<strong>Toko AntaMart</strong><br>Mendalo Darat, Jambi Luar Kota');
+
+                const state = { map: map, marker: null, userPinned: hasInitial };
+                mapRegistry.set(group, state);
+
+                if (hasInitial) {
+                    setPin(group, initialLat, initialLng, true);
+                }
+
+                map.on('click', function (e) {
+                    setPin(group, e.latlng.lat, e.latlng.lng, true);
+                    emitAddressChanged(group);
+                });
+
+                const geoBtn = group.querySelector('[data-map-action="geolocate"]');
+                if (geoBtn) {
+                    geoBtn.addEventListener('click', function () {
+                        if (!navigator.geolocation) {
+                            alert('Browser Anda tidak mendukung GPS / geolokasi.');
+                            return;
+                        }
+                        geoBtn.disabled = true;
+                        const origText = geoBtn.textContent;
+                        geoBtn.textContent = 'Mencari lokasi...';
+                        navigator.geolocation.getCurrentPosition(
+                            function (pos) {
+                                geoBtn.disabled = false;
+                                geoBtn.textContent = origText;
+                                setPin(group, pos.coords.latitude, pos.coords.longitude, true);
+                                emitAddressChanged(group);
+                            },
+                            function () {
+                                geoBtn.disabled = false;
+                                geoBtn.textContent = origText;
+                                alert('Tidak dapat mengakses lokasi GPS. Silakan klik langsung pada peta.');
+                            },
+                            { enableHighAccuracy: true, timeout: 10000 }
+                        );
+                    });
+                }
+
+                const centerBtn = group.querySelector('[data-map-action="center-region"]');
+                if (centerBtn) {
+                    centerBtn.addEventListener('click', function () {
+                        geocodeAndPin(group, true);
+                    });
+                }
             }
 
             window.AntaMartAddress = {
@@ -293,6 +502,16 @@
                         city: data.city || '',
                         district: data.district || '',
                     });
+
+                    const lat = parseFloat(data.latitude);
+                    const lng = parseFloat(data.longitude);
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        setPin(group, lat, lng, true);
+                    } else {
+                        await geocodeAndPin(group, false);
+                    }
+
+                    emitAddressChanged(group);
                 },
                 snapshot: function (group) {
                     const prefix = group.dataset.prefix || '';
@@ -305,6 +524,8 @@
                         district: getVal('district'),
                         village: getVal('village'),
                         address_line1: getVal('address_line1'),
+                        latitude: getVal('latitude'),
+                        longitude: getVal('longitude'),
                     };
                 },
             };

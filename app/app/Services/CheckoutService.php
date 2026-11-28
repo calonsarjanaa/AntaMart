@@ -24,9 +24,11 @@ class CheckoutService
     public function __construct(
         protected InventoryService $inventoryService,
         protected ShippingProviderInterface $shippingProvider,
-        protected ?OrderExpiryService $orderExpiryService = null
+        protected ?OrderExpiryService $orderExpiryService = null,
+        protected ?ShippingRateService $shippingRateService = null
     ) {
         $this->orderExpiryService = $orderExpiryService ?? app(OrderExpiryService::class);
+        $this->shippingRateService = $shippingRateService ?? app(ShippingRateService::class);
     }
 
     /**
@@ -150,11 +152,45 @@ class CheckoutService
             }
         }
 
-        // FR-SHP-003 — Snapshot shipping cost
-        $shippingCost = $this->shippingProvider->calculateCost(
-            $data['shipping_address'],
-            $preparedItems
-        );
+        // FR-SHP-003 — Snapshot authoritative shipping cost and selected courier/service
+        $totalWeightGrams = 0;
+        foreach ($preparedItems as $prep) {
+            /** @var ProductVariant $variant */
+            $variant = $prep['variant'];
+            $totalWeightGrams += max(1, (int) ($variant->weight_grams ?: 500)) * $prep['quantity'];
+        }
+        $totalWeightGrams = max(100, $totalWeightGrams);
+
+        $shippingCourier = null;
+        $shippingService = null;
+        $shippingEtd = null;
+        $shippingDistanceKm = null;
+
+        $selectedShippingOption = trim((string) ($data['shipping_option'] ?? ''));
+        if ($selectedShippingOption !== '') {
+            $resolvedOption = $this->shippingRateService->resolveSelectedOption(
+                $selectedShippingOption,
+                $data['shipping_address'],
+                $totalWeightGrams
+            );
+
+            if (!$resolvedOption) {
+                throw ValidationException::withMessages([
+                    'shipping_option' => 'Pilihan pengiriman tidak valid atau tidak tersedia untuk alamat ini. Silakan pilih ulang pengiriman.',
+                ]);
+            }
+
+            $shippingCost = (float) $resolvedOption['cost'];
+            $shippingCourier = (string) ($resolvedOption['courier'] ?? '');
+            $shippingService = (string) ($resolvedOption['service'] ?? '');
+            $shippingEtd = (string) ($resolvedOption['etd'] ?? '');
+            $shippingDistanceKm = $resolvedOption['distance_km'] !== null ? (float) $resolvedOption['distance_km'] : null;
+        } else {
+            $shippingCost = $this->shippingProvider->calculateCost(
+                $data['shipping_address'],
+                $preparedItems
+            );
+        }
 
         $total = $subtotal + $shippingCost;
 
@@ -166,6 +202,10 @@ class CheckoutService
             $idempotencyKey,
             $subtotal,
             $shippingCost,
+            $shippingCourier,
+            $shippingService,
+            $shippingEtd,
+            $shippingDistanceKm,
             $total,
             $preparedItems,
             $itemsData,
@@ -175,15 +215,19 @@ class CheckoutService
             // All orders (QRIS & COD) start in awaiting_confirmation so the store owner
             // can verify physical offline stock before opening payment or processing.
             $order = Order::create([
-                'customer_id'     => $user?->id,
-                'guest_email'     => $guestEmail,
-                'guest_phone'     => $guestPhone,
-                'status'          => OrderStatus::AwaitingConfirmation,
-                'subtotal'        => $subtotal,
-                'shipping_cost'   => $shippingCost,
-                'total'           => $total,
-                'idempotency_key' => $idempotencyKey,
-                'expires_at'      => null,
+                'customer_id'          => $user?->id,
+                'guest_email'          => $guestEmail,
+                'guest_phone'          => $guestPhone,
+                'status'               => OrderStatus::AwaitingConfirmation,
+                'subtotal'             => $subtotal,
+                'shipping_cost'        => $shippingCost,
+                'shipping_courier'     => $shippingCourier,
+                'shipping_service'     => $shippingService,
+                'shipping_etd'         => $shippingEtd,
+                'shipping_distance_km' => $shippingDistanceKm,
+                'total'                => $total,
+                'idempotency_key'      => $idempotencyKey,
+                'expires_at'           => null,
             ]);
 
             // FR-TRX-004 — Snapshot product details into order_items
@@ -227,6 +271,8 @@ class CheckoutService
                 'province'       => $addr['province'],
                 'postal_code'    => $addr['postal_code'] ?? '',
                 'country'        => $addr['country'] ?? 'ID',
+                'latitude'       => isset($addr['latitude']) && is_numeric($addr['latitude']) ? (float) $addr['latitude'] : null,
+                'longitude'      => isset($addr['longitude']) && is_numeric($addr['longitude']) ? (float) $addr['longitude'] : null,
             ]);
 
             // FR-INV-001 & FR-INV-003 — Reserve stock atomically while awaiting store confirmation

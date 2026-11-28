@@ -10,6 +10,7 @@ use App\Http\Controllers\Storefront\GuestOrderTrackingController;
 use App\Http\Controllers\Storefront\ProductCatalogController;
 use App\Http\Controllers\Storefront\RegionController;
 use App\Http\Controllers\Storefront\RetryPaymentSessionController;
+use App\Http\Controllers\Storefront\ShippingRateController;
 use App\Http\Controllers\Webhook\XenditController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -29,6 +30,8 @@ Route::get('/products', ProductCatalogController::class);
 Route::get('/regions/provinces', [RegionController::class, 'provinces']);
 Route::get('/regions/regencies/{provinceId}', [RegionController::class, 'regencies']);
 Route::get('/regions/districts/{regencyId}', [RegionController::class, 'districts']);
+Route::post('/shipping/rates', [ShippingRateController::class, 'rates']);
+Route::get('/shipping/geocode', [ShippingRateController::class, 'geocode']);
 Route::post('/checkout', CheckoutController::class);
 
 // Retry / Re-create payment session

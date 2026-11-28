@@ -61,6 +61,10 @@ class Order extends Model
         'status',
         'subtotal',
         'shipping_cost',
+        'shipping_courier',
+        'shipping_service',
+        'shipping_etd',
+        'shipping_distance_km',
         'total',
         'idempotency_key',
         'expires_at',
@@ -70,14 +74,42 @@ class Order extends Model
     ];
 
     protected $casts = [
-        'status'        => OrderStatus::class,
-        'subtotal'      => 'decimal:2',
-        'shipping_cost' => 'decimal:2',
-        'total'         => 'decimal:2',
-        'expires_at'    => 'datetime',
-        'confirmed_at'  => 'datetime',
-        'rejected_at'   => 'datetime',
+        'status'               => OrderStatus::class,
+        'subtotal'             => 'decimal:2',
+        'shipping_cost'        => 'decimal:2',
+        'shipping_distance_km' => 'float',
+        'total'                => 'decimal:2',
+        'expires_at'           => 'datetime',
+        'confirmed_at'         => 'datetime',
+        'rejected_at'          => 'datetime',
     ];
+
+    public function shippingMethodLabel(): ?string
+    {
+        if (empty($this->shipping_courier)) {
+            return null;
+        }
+
+        if ($this->shipping_courier === 'antamart') {
+            $label = 'Kurir AntaMart';
+            if ($this->shipping_service) {
+                $label .= ' — ' . $this->shipping_service;
+            }
+            if ($this->shipping_distance_km !== null) {
+                $label .= ' (' . number_format($this->shipping_distance_km, 1) . ' km)';
+            }
+
+            return $label;
+        }
+
+        $courier = strtoupper($this->shipping_courier);
+        $label = $this->shipping_service ? "{$courier} — {$this->shipping_service}" : $courier;
+        if ($this->shipping_etd) {
+            $label .= " ({$this->shipping_etd})";
+        }
+
+        return $label;
+    }
 
     public function isGuest(): bool
     {

@@ -33,6 +33,7 @@
                     <x-indonesia-address-fields
                         prefix="shipping_address"
                         :required="true"
+                        :show-map="true"
                         :values="['recipient_name' => $customer?->name]"
                     />
 
@@ -72,6 +73,25 @@
                     </div>
                 </section>
 
+                <section
+                    class="checkout-form-section"
+                    id="shipping-options-section"
+                    aria-labelledby="shipping-method-title"
+                    data-subtotal="{{ (float) $subtotal }}"
+                    data-weight-grams="{{ (int) ($totalWeightGrams ?? 500) }}"
+                    data-old-shipping-option="{{ old('shipping_option', '') }}"
+                >
+                    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+                        <h2 id="shipping-method-title">Pilihan pengiriman</h2>
+                        <small style="color: #6b7280;">Estimasi berat: {{ number_format(($totalWeightGrams ?? 500) / 1000, 2, ',', '.') }} kg</small>
+                    </div>
+                    <p class="checkout-section-copy" id="shipping-options-status">
+                        Pilih Provinsi, Kota/Kabupaten, Kecamatan, atau pasang pin di peta untuk melihat tarif Kurir AntaMart &amp; ekspedisi.
+                    </p>
+                    <div id="shipping-options-list" class="payment-method-options" style="margin-top: 8px;"></div>
+                    @error('shipping_option')<p class="field-error">{{ $message }}</p>@enderror
+                </section>
+
                 <section class="checkout-form-section" aria-labelledby="payment-method-title">
                     <h2 id="payment-method-title">Metode pembayaran</h2>
                     <fieldset class="payment-method-options" aria-describedby="payment-method-help">
@@ -104,7 +124,14 @@
                     @endforeach
                 </div>
                 <div class="summary-row"><span>Subtotal</span><strong><x-price :amount="$subtotal" /></strong></div>
-                <p>Ongkos kirim dan total akhir dihitung setelah alamat diproses.</p>
+                <div class="summary-row">
+                    <span id="summary-shipping-label">Ongkos kirim</span>
+                    <strong id="summary-shipping-cost">Rp 0</strong>
+                </div>
+                <div class="summary-row" style="border-top: 1px solid #e5e7eb; padding-top: 10px; margin-top: 6px; font-size: 1.05em;">
+                    <span>Total bayar</span>
+                    <strong id="summary-grand-total"><x-price :amount="$subtotal" /></strong>
+                </div>
                 <button class="button button-primary" type="submit">Buat pesanan</button>
                 <small>Harga dan ketersediaan stok akan diperiksa kembali saat pesanan dibuat.</small>
             </aside>
@@ -259,6 +286,159 @@
                         }
                         if (profileHint) profileHint.style.display = 'none';
                     }
+                });
+            }
+
+            // Live Hybrid Shipping Rate Loader (Kurir AntaMart + RajaOngkir)
+            const shippingSection = document.getElementById('shipping-options-section');
+            const shippingList = document.getElementById('shipping-options-list');
+            const shippingStatus = document.getElementById('shipping-options-status');
+            const summaryShippingLabel = document.getElementById('summary-shipping-label');
+            const summaryShippingCost = document.getElementById('summary-shipping-cost');
+            const summaryGrandTotal = document.getElementById('summary-grand-total');
+
+            if (shippingSection && shippingList && shippingStatus) {
+                const subtotal = parseFloat(shippingSection.dataset.subtotal || '0');
+                const weightGrams = parseInt(shippingSection.dataset.weightGrams || '500', 10);
+                let selectedCode = shippingSection.dataset.oldShippingOption || '';
+                let fetchTimer = null;
+                let fetchSeq = 0;
+
+                function formatIdr(amount) {
+                    return 'Rp ' + Math.round(amount).toLocaleString('id-ID');
+                }
+
+                function updateSummary(option) {
+                    const cost = option ? parseFloat(option.cost || 0) : 0;
+                    if (summaryShippingLabel) {
+                        summaryShippingLabel.textContent = option
+                            ? 'Ongkir (' + option.courier_name + ' ' + option.service + ')'
+                            : 'Ongkos kirim';
+                    }
+                    if (summaryShippingCost) summaryShippingCost.textContent = formatIdr(cost);
+                    if (summaryGrandTotal) summaryGrandTotal.textContent = formatIdr(subtotal + cost);
+                }
+
+                function renderShippingOptions(data) {
+                    shippingList.innerHTML = '';
+                    const options = Array.isArray(data?.options) ? data.options : [];
+
+                    if (options.length === 0) {
+                        updateSummary(null);
+                        if (data?.distance_km !== null && data?.distance_km > 20) {
+                            shippingStatus.textContent = 'Lokasi berada di luar jangkauan Kurir AntaMart (' + Number(data.distance_km).toFixed(1) + ' km) dan tarif ekspedisi belum ditemukan untuk kecamatan ini. Coba pilih kecamatan/kota lain.';
+                        } else {
+                            shippingStatus.textContent = 'Belum ada tarif pengiriman ditemukan. Pastikan Kecamatan dipilih atau pasang pin lokasi pada peta.';
+                        }
+                        return;
+                    }
+
+                    const distInfo = (data.distance_km !== null && data.distance_km !== undefined)
+                        ? 'Jarak dari toko: ' + Number(data.distance_km).toFixed(1) + ' km. '
+                        : '';
+                    shippingStatus.textContent = distInfo + 'Pilih salah satu metode pengiriman di bawah ini:';
+
+                    let matched = options.find((o) => o.code === selectedCode);
+                    if (!matched) {
+                        matched = options[0];
+                        selectedCode = matched.code;
+                    }
+
+                    options.forEach(function (opt) {
+                        const label = document.createElement('label');
+                        label.className = 'payment-method-option';
+                        label.style.justifyContent = 'space-between';
+                        label.style.alignItems = 'center';
+
+                        const left = document.createElement('div');
+                        left.style.display = 'flex';
+                        left.style.alignItems = 'flex-start';
+                        left.style.gap = '10px';
+
+                        const radio = document.createElement('input');
+                        radio.type = 'radio';
+                        radio.name = 'shipping_option';
+                        radio.value = opt.code;
+                        radio.required = true;
+                        radio.checked = opt.code === selectedCode;
+                        radio.addEventListener('change', function () {
+                            selectedCode = opt.code;
+                            updateSummary(opt);
+                        });
+
+                        const textWrap = document.createElement('span');
+                        const badge = opt.type === 'local'
+                            ? ' <span style="display:inline-block;padding:1px 6px;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-size:0.75rem;font-weight:600;">Kurir Toko</span>'
+                            : '';
+                        textWrap.innerHTML = '<strong>' + opt.courier_name + ' — ' + opt.service + '</strong>' + badge
+                            + '<small style="display:block;color:#6b7280;">' + (opt.description || '') + (opt.etd ? ' · Estimasi: ' + opt.etd : '') + '</small>';
+
+                        left.appendChild(radio);
+                        left.appendChild(textWrap);
+
+                        const priceEl = document.createElement('strong');
+                        priceEl.style.whiteSpace = 'nowrap';
+                        priceEl.textContent = formatIdr(opt.cost);
+
+                        label.appendChild(left);
+                        label.appendChild(priceEl);
+                        shippingList.appendChild(label);
+                    });
+
+                    updateSummary(matched);
+                }
+
+                async function loadShippingRates() {
+                    const snap = window.AntaMartAddress.snapshot(addressGroup);
+                    const hasRegion = Boolean(snap.city || snap.district);
+                    const hasCoords = Boolean(snap.latitude && snap.longitude);
+
+                    if (!hasRegion && !hasCoords) {
+                        shippingList.innerHTML = '';
+                        shippingStatus.textContent = 'Pilih Provinsi, Kota/Kabupaten, Kecamatan, atau pasang pin di peta untuk melihat tarif Kurir AntaMart & ekspedisi.';
+                        updateSummary(null);
+                        return;
+                    }
+
+                    const seq = ++fetchSeq;
+                    shippingStatus.textContent = 'Menghitung ongkos kirim...';
+
+                    try {
+                        const res = await fetch('/api/shipping/rates', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                province: snap.province || null,
+                                city: snap.city || null,
+                                district: snap.district || null,
+                                village: snap.village || null,
+                                latitude: snap.latitude ? parseFloat(snap.latitude) : null,
+                                longitude: snap.longitude ? parseFloat(snap.longitude) : null,
+                                weight_grams: weightGrams,
+                            }),
+                        });
+
+                        if (seq !== fetchSeq) return;
+                        if (!res.ok) {
+                            shippingStatus.textContent = 'Gagal memuat tarif pengiriman. Silakan coba lagi.';
+                            return;
+                        }
+
+                        const data = await res.json();
+                        renderShippingOptions(data);
+                    } catch (e) {
+                        if (seq === fetchSeq) {
+                            shippingStatus.textContent = 'Koneksi bermasalah saat memuat tarif pengiriman.';
+                        }
+                    }
+                }
+
+                addressGroup.addEventListener('antamart:address-changed', function () {
+                    clearTimeout(fetchTimer);
+                    fetchTimer = setTimeout(loadShippingRates, 250);
                 });
             }
         });

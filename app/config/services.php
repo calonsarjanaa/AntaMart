@@ -43,7 +43,19 @@ return [
     ],
 
     'store' => [
-        'whatsapp_number' => env('STORE_WHATSAPP_NUMBER', ''),
+        'whatsapp_number'    => env('STORE_WHATSAPP_NUMBER', ''),
+        'latitude'           => (float) env('STORE_LAT', -1.606188),
+        'longitude'          => (float) env('STORE_LNG', 103.521922),
+        'origin_postal_code' => env('STORE_POSTAL_CODE', '36361'),
+        'origin_search'      => env('STORE_ORIGIN_SEARCH', 'Mendalo Darat Jambi Luar Kota'),
+        'origin_label'       => env('STORE_ORIGIN_LABEL', 'Perumahan Asri, Mendalo Darat, Kec. Jambi Luar Kota, Kab. Muaro Jambi, Jambi 36361'),
+    ],
+
+    'rajaongkir' => [
+        'api_key'   => env('RAJAONGKIR_API_KEY'),
+        'base_url'  => env('RAJAONGKIR_BASE_URL', 'https://rajaongkir.komerce.id/api/v1'),
+        'origin_id' => env('RAJAONGKIR_ORIGIN_ID'),
+        'couriers'  => env('RAJAONGKIR_COURIERS', 'jne:jnt:sicepat:pos:tiki:anteraja'),
     ],
 
 ];

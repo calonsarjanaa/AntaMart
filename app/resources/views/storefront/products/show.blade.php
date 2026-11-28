@@ -3,7 +3,9 @@
 @section('title', $product['name'])
 
 @section('content')
-    @php($firstAvailableVariantId = collect($product['variants'])->firstWhere('in_stock', true)['id'] ?? null)
+    @php
+        $firstAvailableVariantId = collect($product['variants'])->firstWhere('in_stock', true)['id'] ?? null;
+    @endphp
     <div class="page-container product-detail-page">
         <nav class="breadcrumbs" aria-label="Breadcrumb">
             <a href="{{ route('storefront.home') }}">Beranda</a><span aria-hidden="true">/</span><span>{{ $product['name'] }}</span>
@@ -21,7 +23,9 @@
             <div class="product-detail-info">
                 <p class="section-eyebrow">ANTAMART</p>
                 <h1>{{ $product['name'] }}</h1>
-                @php($startingPrice = collect($product['variants'])->pluck('price')->min())
+                @php
+                    $startingPrice = collect($product['variants'])->pluck('price')->min();
+                @endphp
                 @if ($startingPrice !== null)
                     <p class="detail-price"><x-price :amount="$startingPrice" /></p>
                 @endif
@@ -29,9 +33,13 @@
                     <p class="product-description">{{ $product['description'] }}</p>
                 @endif
                 <div class="variant-list">
-                    <h2 id="variant-list-title">Pilihan produk</h2>
+                    <h2 id="variant-list-title">Pilih satuan</h2>
                     <fieldset class="variant-options" aria-labelledby="variant-list-title">
                         @foreach ($product['variants'] as $variant)
+                            @php
+                                $w = (int) ($variant['weight_grams'] ?? 500);
+                                $weightLabel = $w >= 1000 ? rtrim(rtrim(number_format($w / 1000, 2, ',', '.'), '0'), ',') . ' kg' : $w . ' gr';
+                            @endphp
                             <label class="variant-option {{ $variant['in_stock'] ? '' : 'variant-sold-out' }}">
                                 <span class="variant-option-choice">
                                     @if ($variant['in_stock'])
@@ -40,7 +48,7 @@
                                         <input type="radio" disabled aria-label="{{ $variant['name'] }} habis">
                                     @endif
                                 </span>
-                                <span><strong>{{ $variant['name'] }}</strong><small>SKU {{ $variant['sku'] }}</small></span>
+                                <span><strong>{{ $variant['name'] }}</strong><small>SKU {{ $variant['sku'] }} · Berat {{ $weightLabel }}</small></span>
                                 <span class="variant-option-meta">
                                     <x-price :amount="$variant['price']" />
                                     <x-status-badge :status="$variant['in_stock'] ? 'Tersedia' : 'Habis'" />

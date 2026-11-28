@@ -38,6 +38,7 @@
                 <p class="checkout-section-copy">Alamat ini dapat langsung ditarik saat checkout menggunakan tombol <strong>Gunakan alamat sesuai profil</strong>.</p>
                 <x-indonesia-address-fields
                     :required="false"
+                    :show-map="true"
                     :values="[
                         'recipient_name' => $user->recipient_name ?: $user->name,
                         'phone' => $user->phone,
@@ -46,6 +47,8 @@
                         'district' => $user->district,
                         'village' => $user->village,
                         'address_line1' => $user->address_line1,
+                        'latitude' => $user->latitude,
+                        'longitude' => $user->longitude,
                     ]"
                 />
             </section>

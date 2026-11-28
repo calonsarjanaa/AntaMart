@@ -32,6 +32,8 @@ class User extends Authenticatable
         'village',
         'province',
         'postal_code',
+        'latitude',
+        'longitude',
     ];
 
     /**
@@ -52,6 +54,8 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'birth_date'        => 'date',
+        'latitude'          => 'float',
+        'longitude'         => 'float',
     ];
 
     public function hasBirthDate(): bool
@@ -91,6 +95,8 @@ class User extends Authenticatable
             'address_line1'  => (string) ($this->address_line1 ?? ''),
             'address_line2'  => (string) ($this->address_line2 ?? ''),
             'postal_code'    => (string) ($this->postal_code ?? ''),
+            'latitude'       => $this->latitude !== null ? (string) $this->latitude : '',
+            'longitude'      => $this->longitude !== null ? (string) $this->longitude : '',
         ];
     }
 
