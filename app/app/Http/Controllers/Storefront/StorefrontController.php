@@ -133,6 +133,7 @@ class StorefrontController extends Controller
             'name' => $variant->name,
             'sku' => $variant->sku,
             'price' => $variant->price,
+            'weight_grams' => (int) ($variant->weight_grams ?: 500),
             'available_stock' => $variant->available_stock,
             'in_stock' => $variant->available_stock > 0,
         ])->values();

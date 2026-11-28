@@ -230,3 +230,135 @@ test('checkout authoritatively applies Kurir AntaMart rate within 20km and rejec
         ->and($localOrder->address->latitude)->toBe(-1.606188);
 });
 
+test('owner can configure per-unit variant weight and checkout multiplies unit weight by quantity for shipping', function () {
+    $owner = User::factory()->create(['role' => 'store_owner']);
+
+    // Owner creates Per Bungkus (50g) and Per Slop (500g) variants
+    $this->actingAs($owner, 'web')
+        ->post(route('owner.products.variants.store', $this->dailyProduct), [
+            'name' => 'Per Bungkus',
+            'sku' => 'UNIT-BKS-01',
+            'price' => 25000,
+            'weight_grams' => 50,
+            'stock_physical' => 50,
+            'is_active' => 1,
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect();
+
+    $this->actingAs($owner, 'web')
+        ->post(route('owner.products.variants.store', $this->dailyProduct), [
+            'name' => 'Per Slop',
+            'sku' => 'UNIT-SLP-01',
+            'price' => 240000,
+            'weight_grams' => 500,
+            'stock_physical' => 20,
+            'is_active' => 1,
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect();
+
+    $bungkus = ProductVariant::where('sku', 'UNIT-BKS-01')->firstOrFail();
+    $slop = ProductVariant::where('sku', 'UNIT-SLP-01')->firstOrFail();
+
+    expect($bungkus->weight_grams)->toBe(50)
+        ->and($slop->weight_grams)->toBe(500);
+
+    // Customer adds 2 x Per Bungkus (100g) + 3 x Per Slop (1500g) = 1600g total
+    $customer = User::factory()->create(['role' => 'customer']);
+    $this->actingAs($customer, 'web')
+        ->post(route('storefront.cart.items.store'), [
+            'product_variant_id' => $bungkus->id,
+            'quantity' => 2,
+        ]);
+    $this->actingAs($customer, 'web')
+        ->post(route('storefront.cart.items.store'), [
+            'product_variant_id' => $slop->id,
+            'quantity' => 3,
+        ]);
+
+    $this->actingAs($customer, 'web')
+        ->get(route('storefront.checkout.create'))
+        ->assertOk()
+        ->assertSee('data-weight-grams="1600"', false);
+
+    $capturedWeight = null;
+    Http::fake([
+        'https://rajaongkir.komerce.id/api/v1/destination/domestic-destination*' => Http::response([
+            'data' => [
+                ['id' => 31710, 'label' => 'KEBAYORAN BARU, JAKARTA SELATAN', 'district_name' => 'KEBAYORAN BARU', 'city_name' => 'JAKARTA SELATAN', 'province_name' => 'DKI JAKARTA'],
+            ],
+        ], 200),
+        'https://rajaongkir.komerce.id/api/v1/calculate/domestic-cost' => function ($request) use (&$capturedWeight) {
+            $capturedWeight = (int) $request['weight'];
+            return Http::response([
+                'data' => [
+                    ['name' => 'JNE', 'code' => 'jne', 'service' => 'REG', 'description' => 'Layanan Reguler', 'cost' => 36000, 'etd' => '2-3'],
+                ],
+            ], 200);
+        },
+    ]);
+
+    $this->actingAs($customer, 'web')
+        ->post(route('storefront.checkout.store'), [
+            'payment_method' => 'cod',
+            'shipping_option' => 'jne:REG',
+            'shipping_address' => [
+                'recipient_name' => 'Pembeli Slop',
+                'phone' => '081234567890',
+                'province' => 'DKI Jakarta',
+                'city' => 'Kota Jakarta Selatan',
+                'district' => 'Kebayoran Baru',
+                'village' => 'Senayan',
+                'address_line1' => 'Jl. Sudirman No. 99',
+            ],
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect();
+
+    expect($capturedWeight)->toBe(1600);
+});
+
+test('owner can create a new product with multiple units at once', function () {
+    $owner = User::factory()->create(['role' => 'store_owner']);
+
+    $this->actingAs($owner, 'web')
+        ->get(route('owner.products.create'))
+        ->assertOk()
+        ->assertSee('+ Tambah satuan');
+
+    $this->actingAs($owner, 'web')
+        ->post(route('owner.products.store'), [
+            'name' => 'Kopi Kapal Multi Satuan',
+            'category_id' => $this->dailyCategory->id,
+            'description' => 'Tersedia per sachet dan per renteng',
+            'variants' => [
+                [
+                    'name' => 'Per Sachet',
+                    'sku' => 'KOPI-SCH-01',
+                    'price' => 2500,
+                    'weight_grams' => 30,
+                    'stock_physical' => 100,
+                    'is_active' => 1,
+                ],
+                [
+                    'name' => 'Per Renteng',
+                    'sku' => 'KOPI-RNT-01',
+                    'price' => 22000,
+                    'weight_grams' => 300,
+                    'stock_physical' => 30,
+                    'is_active' => 1,
+                ],
+            ],
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect();
+
+    $product = Product::where('name', 'Kopi Kapal Multi Satuan')->with('variants')->firstOrFail();
+    expect($product->variants)->toHaveCount(2)
+        ->and($product->variants->pluck('weight_grams', 'name')->all())->toBe([
+            'Per Sachet' => 30,
+            'Per Renteng' => 300,
+        ]);
+});
+
