@@ -22,6 +22,13 @@ class OrderAddress extends Model
         'province',
         'postal_code',
         'country',
+        'latitude',
+        'longitude',
+    ];
+
+    protected $casts = [
+        'latitude'  => 'float',
+        'longitude' => 'float',
     ];
 
     public function order(): BelongsTo

@@ -71,6 +71,9 @@
                         </div>
                         <div class="owner-state-card">
                             <span>Pengiriman</span>
+                            @if ($order->shippingMethodLabel())
+                                <small><strong>Pilihan pembeli:</strong> {{ $order->shippingMethodLabel() }}</small>
+                            @endif
                             @if ($order->shipment)
                                 <x-status-badge :status="$order->status->value" />
                                 <small>Metode: {{ $order->shipment->method === 'manual' ? 'Manual' : $order->shipment->method }}</small>
@@ -282,6 +285,11 @@
                 <form method="post" action="{{ route('owner.orders.shipment.store', $order->id) }}">
                     @csrf
                     <div class="action-modal-body">
+                        @if ($order->shippingMethodLabel())
+                            <p style="margin: 0 0 10px; padding: 8px 10px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; font-size: 0.9rem;">
+                                <strong>Kurir pilihan pembeli:</strong> {{ $order->shippingMethodLabel() }}
+                            </p>
+                        @endif
                         <div class="form-field">
                             <label class="field-label" for="tracking-number">Nomor resi <span class="required-mark" aria-hidden="true">*</span></label>
                             <input id="tracking-number" name="tracking_number" type="text" maxlength="255" value="{{ old('tracking_number') }}" required>

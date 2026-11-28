@@ -68,6 +68,8 @@ class CustomerAuthController extends Controller
                 'address_line1' => ['nullable', 'string', 'max:255'],
                 'address_line2' => ['nullable', 'string', 'max:255'],
                 'postal_code' => ['nullable', 'string', 'max:20'],
+                'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+                'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             ]);
         }
 
@@ -83,7 +85,7 @@ class CustomerAuthController extends Controller
         ];
 
         if (!$skipProfile) {
-            foreach (['birth_date', 'recipient_name', 'phone', 'province', 'city', 'district', 'village', 'address_line1', 'address_line2', 'postal_code'] as $field) {
+            foreach (['birth_date', 'recipient_name', 'phone', 'province', 'city', 'district', 'village', 'address_line1', 'address_line2', 'postal_code', 'latitude', 'longitude'] as $field) {
                 $attributes[$field] = $data[$field] ?? null;
             }
         }
@@ -126,6 +128,8 @@ class CustomerAuthController extends Controller
             'address_line1' => ['nullable', 'string', 'max:255'],
             'address_line2' => ['nullable', 'string', 'max:255'],
             'postal_code' => ['nullable', 'string', 'max:20'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
         ], [
             'birth_date.before_or_equal' => 'Tanggal lahir tidak boleh di masa depan.',
         ]);

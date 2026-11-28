@@ -84,6 +84,7 @@ class BrowserCheckoutController extends Controller
                 'image_url' => $variant->product->image_path ? Storage::disk('public')->url($variant->product->image_path) : null,
                 'quantity' => $quantity,
                 'price' => (float) $variant->price,
+                'weight_grams' => max(1, (int) ($variant->weight_grams ?: 500)),
                 'line_total' => (float) $variant->price * $quantity,
             ];
         })->values();
@@ -114,6 +115,8 @@ class BrowserCheckoutController extends Controller
                     'address_line1' => $lastOrder->address->address_line1,
                     'address_line2' => $lastOrder->address->address_line2 ?? '',
                     'postal_code' => $lastOrder->address->postal_code ?? '',
+                    'latitude' => $lastOrder->address->latitude !== null ? (string) $lastOrder->address->latitude : '',
+                    'longitude' => $lastOrder->address->longitude !== null ? (string) $lastOrder->address->longitude : '',
                 ];
             }
         } elseif (session()->has('last_checkout_data')) {
@@ -135,14 +138,19 @@ class BrowserCheckoutController extends Controller
                         'address_line1' => $lastOrder->address->address_line1,
                         'address_line2' => $lastOrder->address->address_line2 ?? '',
                         'postal_code' => $lastOrder->address->postal_code ?? '',
+                        'latitude' => $lastOrder->address->latitude !== null ? (string) $lastOrder->address->latitude : '',
+                        'longitude' => $lastOrder->address->longitude !== null ? (string) $lastOrder->address->longitude : '',
                     ];
                 }
             }
         }
 
+        $totalWeightGrams = max(100, (int) $items->sum(fn (array $item): int => $item['weight_grams'] * $item['quantity']));
+
         return view('storefront.checkout.create', [
             'items' => $items,
             'subtotal' => $items->sum('line_total'),
+            'totalWeightGrams' => $totalWeightGrams,
             'customer' => $customer,
             'profileAddress' => $customer?->profileAddress(),
             'lastCheckout' => $lastCheckout,
@@ -176,6 +184,9 @@ class BrowserCheckoutController extends Controller
             'shipping_address.address_line1' => ['required', 'string', 'max:255'],
             'shipping_address.address_line2' => ['nullable', 'string', 'max:255'],
             'shipping_address.postal_code' => ['nullable', 'string', 'max:20'],
+            'shipping_address.latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'shipping_address.longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'shipping_option' => ['nullable', 'string', 'max:100'],
             'payment_method' => ['required', 'in:xendit,cod'],
         ])->validate();
 
@@ -202,6 +213,8 @@ class BrowserCheckoutController extends Controller
                 'address_line1' => $validated['shipping_address']['address_line1'],
                 'address_line2' => $validated['shipping_address']['address_line2'] ?? '',
                 'postal_code' => $validated['shipping_address']['postal_code'] ?? '',
+                'latitude' => $validated['shipping_address']['latitude'] ?? '',
+                'longitude' => $validated['shipping_address']['longitude'] ?? '',
             ],
         ]);
 

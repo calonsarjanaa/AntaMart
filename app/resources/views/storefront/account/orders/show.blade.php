@@ -79,6 +79,9 @@
 
                 <section class="checkout-form-section tracking-shipment-panel" aria-labelledby="customer-order-shipment-title">
                     <h2 id="customer-order-shipment-title">Pengiriman</h2>
+                    @if ($order->shippingMethodLabel())
+                        <div><span>Kurir / layanan</span><strong>{{ $order->shippingMethodLabel() }}</strong></div>
+                    @endif
                     @if ($order->shipment)
                         <p>{{ $order->shipment->method === 'manual' ? 'Pengiriman dikelola manual oleh toko.' : 'Informasi pengiriman tersedia.' }}</p>
                         @if ($order->shipment->tracking_number)<div><span>Nomor resi</span><strong>{{ $order->shipment->tracking_number }}</strong></div>@endif

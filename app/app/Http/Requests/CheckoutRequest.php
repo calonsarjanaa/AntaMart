@@ -38,7 +38,10 @@ class CheckoutRequest extends FormRequest
             'shipping_address.province'       => ['required', 'string', 'max:100'],
             'shipping_address.postal_code'    => ['nullable', 'string', 'max:20'],
             'shipping_address.country'        => ['nullable', 'string', 'max:10'],
+            'shipping_address.latitude'       => ['nullable', 'numeric', 'between:-90,90'],
+            'shipping_address.longitude'      => ['nullable', 'numeric', 'between:-180,180'],
             'shipping_method'                 => ['nullable', 'string', 'max:50'],
+            'shipping_option'                 => ['nullable', 'string', 'max:100'],
             'payment_method'                  => ['sometimes', Rule::enum(PaymentMethod::class)],
             'birth_date'                      => ['nullable', 'date', 'before_or_equal:today'],
         ];

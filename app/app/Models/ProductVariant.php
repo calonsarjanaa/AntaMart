@@ -17,6 +17,7 @@ class ProductVariant extends Model
         'sku',
         'name',
         'price',
+        'weight_grams',
         'stock_physical',
         'stock_reserved',
         'is_active',
@@ -24,6 +25,7 @@ class ProductVariant extends Model
 
     protected $casts = [
         'price'          => 'decimal:2',
+        'weight_grams'   => 'integer',
         'stock_physical' => 'integer',
         'stock_reserved' => 'integer',
         'is_active'      => 'boolean',
