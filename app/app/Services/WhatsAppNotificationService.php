@@ -310,6 +310,8 @@ class WhatsAppNotificationService
         $parts = array_filter([
             $address->address_line1,
             $address->address_line2,
+            $address->village ? "Desa/Kel. {$address->village}" : null,
+            $address->district ? "Kec. {$address->district}" : null,
             $address->city,
             $address->province,
             $address->postal_code,

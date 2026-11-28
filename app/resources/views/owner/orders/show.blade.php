@@ -174,7 +174,7 @@
                 <h3>Alamat pengiriman</h3>
                 @if ($order->address)
                     <strong>{{ $order->address->recipient_name }}</strong>
-                    <p>{{ $order->address->phone }}<br>{{ $order->address->address_line1 }}@if ($order->address->address_line2), {{ $order->address->address_line2 }}@endif<br>{{ $order->address->city }}, {{ $order->address->province }} {{ $order->address->postal_code }}<br>{{ $order->address->country }}</p>
+                    <p>{{ $order->address->phone }}<br>{{ $order->address->address_line1 }}@if ($order->address->address_line2), {{ $order->address->address_line2 }}@endif @if ($order->address->village)<br>Desa/Kel. {{ $order->address->village }}@endif @if ($order->address->district), Kec. {{ $order->address->district }}@endif<br>{{ $order->address->city }}, {{ $order->address->province }} {{ $order->address->postal_code }}</p>
                 @else
                     <p class="owner-muted">Alamat tidak tersedia.</p>
                 @endif

@@ -30,30 +30,45 @@
 
                 <section class="checkout-form-section" aria-labelledby="address-title">
                     <h2 id="address-title">Alamat pengiriman</h2>
-                    <div class="checkout-fields">
-                        <x-form-field name="shipping_address[recipient_name]" label="Nama penerima" :value="$customer?->name" autocomplete="name" required />
-                        <x-form-field name="shipping_address[phone]" label="Nomor telepon penerima" type="tel" autocomplete="shipping tel" required />
-                        <x-form-field name="shipping_address[address_line1]" label="Alamat" autocomplete="shipping street-address" required />
-                        <x-form-field name="shipping_address[address_line2]" label="Detail alamat (opsional)" autocomplete="shipping address-line2" />
-                        <x-form-field name="shipping_address[city]" label="Kota/Kabupaten" autocomplete="shipping address-level2" required />
-                        <x-form-field name="shipping_address[province]" label="Provinsi" autocomplete="shipping address-level1" required />
-                        <x-form-field name="shipping_address[postal_code]" label="Kode pos" autocomplete="shipping postal-code" required />
-                    </div>
+                    <x-indonesia-address-fields
+                        prefix="shipping_address"
+                        :required="true"
+                        :values="['recipient_name' => $customer?->name]"
+                    />
 
-                    <div class="checkout-toggle-wrapper">
-                        <label class="toggle-switch" for="toggle-previous-checkout">
-                            <input
-                                type="checkbox"
-                                id="toggle-previous-checkout"
-                                role="switch"
-                                aria-checked="false"
-                                class="toggle-switch-input"
-                                data-server-checkout='@json($lastCheckout)'
-                            >
-                            <span class="toggle-switch-slider" aria-hidden="true"></span>
-                            <span class="toggle-switch-label">Gunakan informasi checkout sebelumnya</span>
-                        </label>
-                        <p class="toggle-switch-hint" id="toggle-previous-checkout-hint" style="display:none;"></p>
+                    <div class="checkout-toggle-wrapper" style="display: grid; gap: 10px;">
+                        @if ($customer)
+                            <div>
+                                <label class="toggle-switch" for="toggle-profile-address">
+                                    <input
+                                        type="checkbox"
+                                        id="toggle-profile-address"
+                                        role="switch"
+                                        aria-checked="false"
+                                        class="toggle-switch-input"
+                                        data-profile-address='@json($profileAddress)'
+                                    >
+                                    <span class="toggle-switch-slider" aria-hidden="true"></span>
+                                    <span class="toggle-switch-label">Gunakan alamat sesuai profil</span>
+                                </label>
+                                <p class="toggle-switch-hint" id="toggle-profile-address-hint" style="display:none;"></p>
+                            </div>
+                        @endif
+                        <div>
+                            <label class="toggle-switch" for="toggle-previous-checkout">
+                                <input
+                                    type="checkbox"
+                                    id="toggle-previous-checkout"
+                                    role="switch"
+                                    aria-checked="false"
+                                    class="toggle-switch-input"
+                                    data-server-checkout='@json($lastCheckout)'
+                                >
+                                <span class="toggle-switch-slider" aria-hidden="true"></span>
+                                <span class="toggle-switch-label">Gunakan informasi checkout sebelumnya</span>
+                            </label>
+                            <p class="toggle-switch-hint" id="toggle-previous-checkout-hint" style="display:none;"></p>
+                        </div>
                     </div>
                 </section>
 
@@ -101,22 +116,18 @@
             const toggle = document.getElementById('toggle-previous-checkout');
             const hint = document.getElementById('toggle-previous-checkout-hint');
             const form = document.querySelector('.checkout-layout');
-            if (!toggle || !form) return;
+            const addressGroup = document.querySelector('[data-indonesia-address]');
+            if (!toggle || !form || !addressGroup) return;
 
             let backupValues = null;
 
             form.addEventListener('submit', function () {
                 try {
+                    const addr = window.AntaMartAddress.snapshot(addressGroup);
                     const dataToSave = {
                         guest_email: document.getElementById('guest_email')?.value || '',
                         guest_phone: document.getElementById('guest_phone')?.value || '',
-                        recipient_name: document.getElementById('shipping_address_recipient_name')?.value || '',
-                        phone: document.getElementById('shipping_address_phone')?.value || '',
-                        address_line1: document.getElementById('shipping_address_address_line1')?.value || '',
-                        address_line2: document.getElementById('shipping_address_address_line2')?.value || '',
-                        city: document.getElementById('shipping_address_city')?.value || '',
-                        province: document.getElementById('shipping_address_province')?.value || '',
-                        postal_code: document.getElementById('shipping_address_postal_code')?.value || '',
+                        ...addr,
                     };
                     localStorage.setItem('antamart_last_checkout', JSON.stringify(dataToSave));
                 } catch (e) {}
@@ -151,11 +162,10 @@
                 if (el && value !== undefined && value !== null) {
                     el.value = value;
                     el.dispatchEvent(new Event('input', { bubbles: true }));
-                    el.dispatchEvent(new Event('change', { bubbles: true }));
                 }
             }
 
-            toggle.addEventListener('change', function () {
+            toggle.addEventListener('change', async function () {
                 toggle.setAttribute('aria-checked', toggle.checked ? 'true' : 'false');
 
                 if (toggle.checked) {
@@ -176,24 +186,12 @@
                     backupValues = {
                         guest_email: document.getElementById('guest_email')?.value || '',
                         guest_phone: document.getElementById('guest_phone')?.value || '',
-                        recipient_name: document.getElementById('shipping_address_recipient_name')?.value || '',
-                        phone: document.getElementById('shipping_address_phone')?.value || '',
-                        address_line1: document.getElementById('shipping_address_address_line1')?.value || '',
-                        address_line2: document.getElementById('shipping_address_address_line2')?.value || '',
-                        city: document.getElementById('shipping_address_city')?.value || '',
-                        province: document.getElementById('shipping_address_province')?.value || '',
-                        postal_code: document.getElementById('shipping_address_postal_code')?.value || '',
+                        ...window.AntaMartAddress.snapshot(addressGroup),
                     };
 
-                    if (previousData.recipient_name) setFieldValue('shipping_address_recipient_name', previousData.recipient_name);
-                    if (previousData.phone) setFieldValue('shipping_address_phone', previousData.phone);
-                    if (previousData.address_line1) setFieldValue('shipping_address_address_line1', previousData.address_line1);
-                    if (previousData.address_line2 !== undefined) setFieldValue('shipping_address_address_line2', previousData.address_line2);
-                    if (previousData.city) setFieldValue('shipping_address_city', previousData.city);
-                    if (previousData.province) setFieldValue('shipping_address_province', previousData.province);
-                    if (previousData.postal_code) setFieldValue('shipping_address_postal_code', previousData.postal_code);
                     if (previousData.guest_email) setFieldValue('guest_email', previousData.guest_email);
                     if (previousData.guest_phone) setFieldValue('guest_phone', previousData.guest_phone);
+                    await window.AntaMartAddress.apply(addressGroup, previousData);
 
                     if (hint) {
                         hint.textContent = 'Informasi checkout sebelumnya berhasil diterapkan.';
@@ -202,22 +200,67 @@
                     }
                 } else {
                     if (backupValues) {
-                        setFieldValue('shipping_address_recipient_name', backupValues.recipient_name);
-                        setFieldValue('shipping_address_phone', backupValues.phone);
-                        setFieldValue('shipping_address_address_line1', backupValues.address_line1);
-                        setFieldValue('shipping_address_address_line2', backupValues.address_line2);
-                        setFieldValue('shipping_address_city', backupValues.city);
-                        setFieldValue('shipping_address_province', backupValues.province);
-                        setFieldValue('shipping_address_postal_code', backupValues.postal_code);
                         setFieldValue('guest_email', backupValues.guest_email);
                         setFieldValue('guest_phone', backupValues.guest_phone);
+                        await window.AntaMartAddress.apply(addressGroup, backupValues);
                     }
-
-                    if (hint) {
-                        hint.style.display = 'none';
-                    }
+                    if (hint) hint.style.display = 'none';
                 }
             });
+
+            const profileToggle = document.getElementById('toggle-profile-address');
+            const profileHint = document.getElementById('toggle-profile-address-hint');
+            let profileBackupValues = null;
+
+            if (profileToggle) {
+                profileToggle.addEventListener('change', async function () {
+                    profileToggle.setAttribute('aria-checked', profileToggle.checked ? 'true' : 'false');
+
+                    if (profileToggle.checked) {
+                        let profileData = null;
+                        const raw = profileToggle.getAttribute('data-profile-address');
+                        if (raw && raw !== 'null' && raw !== '') {
+                            try {
+                                const parsed = JSON.parse(raw);
+                                if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
+                                    profileData = parsed;
+                                }
+                            } catch (e) {}
+                        }
+
+                        if (!profileData) {
+                            profileToggle.checked = false;
+                            profileToggle.setAttribute('aria-checked', 'false');
+                            if (profileHint) {
+                                profileHint.innerHTML = 'Alamat pada profil belum diisi. Silakan lengkapi di <a href="{{ route('storefront.account.profile.show') }}" style="text-decoration: underline;">halaman profil</a>.';
+                                profileHint.className = 'toggle-switch-hint warning';
+                                profileHint.style.display = 'block';
+                            }
+                            return;
+                        }
+
+                        if (toggle.checked) {
+                            toggle.checked = false;
+                            toggle.setAttribute('aria-checked', 'false');
+                            if (hint) hint.style.display = 'none';
+                        }
+
+                        profileBackupValues = window.AntaMartAddress.snapshot(addressGroup);
+                        await window.AntaMartAddress.apply(addressGroup, profileData);
+
+                        if (profileHint) {
+                            profileHint.textContent = 'Alamat dari profil berhasil diterapkan.';
+                            profileHint.className = 'toggle-switch-hint success';
+                            profileHint.style.display = 'block';
+                        }
+                    } else {
+                        if (profileBackupValues) {
+                            await window.AntaMartAddress.apply(addressGroup, profileBackupValues);
+                        }
+                        if (profileHint) profileHint.style.display = 'none';
+                    }
+                });
+            }
         });
     </script>
 @endsection

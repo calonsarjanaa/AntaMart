@@ -64,6 +64,8 @@ Route::middleware('guest:web')->group(function () {
 
 Route::middleware(['auth:web', 'role:customer'])->prefix('/account')->name('storefront.account.')->group(function () {
     Route::get('/', [CustomerAuthController::class, 'account'])->name('index');
+    Route::get('/profile', [CustomerAuthController::class, 'showProfile'])->name('profile.show');
+    Route::put('/profile', [CustomerAuthController::class, 'updateProfile'])->name('profile.update');
     Route::post('/logout', [CustomerAuthController::class, 'logout'])->name('logout');
     Route::get('/orders', [CustomerOrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{orderId}', [CustomerOrderController::class, 'show'])->name('orders.show');

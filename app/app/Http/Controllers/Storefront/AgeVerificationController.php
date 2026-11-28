@@ -4,18 +4,26 @@ namespace App\Http\Controllers\Storefront;
 
 use App\Http\Controllers\Controller;
 use App\Models\ProductCategory;
+use App\Services\AgeVerificationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class AgeVerificationController extends Controller
 {
-    public function show(Request $request, string $category)
+    public function show(Request $request, string $category, AgeVerificationService $ageVerificationService)
     {
         $categoryModel = ProductCategory::query()->where('slug', $category)->firstOrFail();
 
         $minAge = $categoryModel->min_age ?? 21;
+        $ageStatus = $ageVerificationService->status($request->user('web'), $minAge);
 
-        if (!$categoryModel->isAgeRestricted() || session("age_verified_{$minAge}")) {
+        if ($categoryModel->isAgeRestricted() && $ageStatus === 'underage') {
+            return redirect()->route('storefront.home')->withErrors([
+                'birth_date' => "Maaf, usia pada profil akun Anda belum memenuhi syarat minimal {$minAge} tahun untuk mengakses kategori {$categoryModel->name}.",
+            ]);
+        }
+
+        if (!$categoryModel->isAgeRestricted() || $ageStatus === 'verified') {
             $fallback = route('storefront.home', ['category' => $categoryModel->slug]);
             $returnUrl = $this->safeReturnUrl($request->query('return_url'), $fallback);
 
