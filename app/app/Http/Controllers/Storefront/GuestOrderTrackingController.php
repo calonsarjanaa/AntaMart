@@ -12,7 +12,7 @@ class GuestOrderTrackingController extends Controller
     public function __invoke(Request $request, GuestOrderTrackingService $trackingService): JsonResponse
     {
         $data = $request->validate([
-            'order_id' => ['required', 'string', 'size:26'],
+            'order_id' => ['required', 'string', 'min:10', 'max:26'],
             'email'    => ['required', 'email', 'max:255'],
         ]);
 
